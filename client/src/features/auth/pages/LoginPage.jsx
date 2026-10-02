@@ -2,7 +2,6 @@ import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { login } from '../../../services/api/auth.js'
-import { config } from '../../../services/config.js'
 import { userMessage } from '../../../services/errors.js'
 import { ROLE } from '../../../shared/lib/enums.js'
 
@@ -64,7 +63,8 @@ export default function LoginPage() {
           {mutation.isPending ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
-      {config.useMocks && (
+      {/* Inline env check (not config.useMocks) so the build drops it when mocks are off. */}
+      {import.meta.env.VITE_USE_MOCKS === 'true' && (
         <p className="mt-4 text-xs text-stone-500">
           Mock accounts: daee@bayyinah.test, daee2@bayyinah.test, admin@bayyinah.test, password
           demo1234
