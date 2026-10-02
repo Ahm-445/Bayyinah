@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { userMessage } from '../../../services/errors.js'
 import { DRAFT_STATUS } from '../../../shared/lib/enums.js'
 import { useApproveDraft, useRejectDraft } from '../hooks/useDraft.js'
-import StateNotice from './StateNotice.jsx'
+import StateNotice from '../../../shared/components/StateNotice.jsx'
 
 const BLOCKED_REASON = {
   FAIL: 'Verification failed: the draft cites sources that were not retrieved or makes claims the evidence does not support.',

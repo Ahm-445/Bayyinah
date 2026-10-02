@@ -6,7 +6,7 @@ import DraftEditor from '../components/DraftEditor.jsx'
 import EvidencePanel from '../components/EvidencePanel.jsx'
 import QuestionPanel from '../components/QuestionPanel.jsx'
 import ReviewActions from '../components/ReviewActions.jsx'
-import StateNotice from '../components/StateNotice.jsx'
+import StateNotice from '../../../shared/components/StateNotice.jsx'
 import VerificationPanel from '../components/VerificationPanel.jsx'
 import { useDraft, useSaveDraft } from '../hooks/useDraft.js'
 
