@@ -1,0 +1,27 @@
+[
+  {
+    "sourceId": "quranpedia-quran-hafs",
+    "title": "القرآن الكريم - حفص عن عاصم",
+    "domain": "quran",
+    "sourceType": "quran",
+    "url": "https://quranpedia.net/",
+    "language": "ar",
+    "version": "2026-09-30",
+    "authorityLevel": "primary",
+    "usageBasis": "Qur'an text listed as an approved reference (quranpedia.net) in the challenge scientific package.",
+    "active": true
+  },
+  {
+    "sourceId": "quranpedia-tafsir-book-1",
+    "title": "تيسير التفسير",
+    "domain": "tafsir",
+    "sourceType": "tafsir",
+    "author": "إبراهيم القطان",
+    "url": "https://quranpedia.net/",
+    "language": "ar",
+    "version": "2026-08-10",
+    "authorityLevel": "secondary",
+    "usageBasis": "TO CONFIRM: tafsir book served via quranpedia.net. Confirm it is covered by the approved tafsir sources in the scientific package and that its licence allows public use.",
+    "active": true
+  }
+]
