@@ -2,8 +2,10 @@ const SOURCE_ID = "quranpedia-quran-hafs";
 const SOURCE_TITLE = "القرآن الكريم - حفص عن عاصم";
 const SOURCE_VERSION = "2026-09-30";
 const SOURCE_URL = "https://quranpedia.net/";
+const SOURCE_USAGE_BASIS =
+  "Quranpedia permits in-app use; redistribution of the dataset requires attribution and the dump version.";
 
-function buildQuranChunk(ayah) {
+function buildQuranChunk(ayah, { sourceVersion = SOURCE_VERSION } = {}) {
   if (!ayah || typeof ayah !== "object") {
     throw new Error("Ayah is required");
   }
@@ -20,6 +22,10 @@ function buildQuranChunk(ayah) {
     throw new Error("Ayah text is required");
   }
 
+  if (!sourceVersion || typeof sourceVersion !== "string") {
+    throw new Error("Source version is required");
+  }
+
   const chunkId = `quran-hafs-${ayah.surahNumber}-${ayah.ayahNumber}`;
 
   return {
@@ -31,6 +37,7 @@ function buildQuranChunk(ayah) {
       category: "quran",
       sourceType: "quran",
       source: SOURCE_URL,
+      url: SOURCE_URL,
       title: SOURCE_TITLE,
 
       language: "ar",
@@ -49,7 +56,10 @@ function buildQuranChunk(ayah) {
 
       mushaf: "حفص عن عاصم",
       approved: true,
-      sourceVersion: SOURCE_VERSION,
+      version: sourceVersion,
+      license: "Quranpedia dump license",
+      usageBasis: SOURCE_USAGE_BASIS,
+      sourceVersion,
     },
   };
 }
@@ -59,7 +69,7 @@ function buildQuranChunks(ayahs) {
     throw new Error("Ayahs must be an array");
   }
 
-  return ayahs.map(buildQuranChunk);
+  return ayahs.map((ayah) => buildQuranChunk(ayah));
 }
 
 module.exports = {

@@ -34,13 +34,30 @@ function buildCitation(evidence) {
     throw new Error("Evidence citation is required");
   }
 
+  const metadata = evidence.citation;
+
   return {
     sourceId: evidence.sourceId,
     chunkId: evidence.chunkId,
-    sourceTitle:
-      evidence.citation.sourceTitle || null,
-    reference:
-      evidence.citation.reference || null,
+    sourceTitle: metadata.sourceTitle || metadata.title || null,
+    sourceUrl: metadata.sourceUrl || metadata.url || metadata.source || null,
+    sourceType: metadata.sourceType || null,
+    category: metadata.category || null,
+    language: metadata.language || null,
+    version: metadata.version || metadata.sourceVersion || null,
+    license: metadata.license || null,
+    usageBasis: metadata.usageBasis || null,
+    reference: metadata.reference || null,
+    author: metadata.author || null,
+    volume: metadata.volume || null,
+    pageNumber: metadata.pageNumber ?? metadata.page ?? null,
+    hadithCollection: metadata.hadithCollection || metadata.collection || null,
+    hadithNumber: metadata.hadithNumber || null,
+    hadithGrade: metadata.hadithGrade || metadata.grade || null,
+    gradingSource: metadata.gradingSource || null,
+    surahNumber: metadata.surahNumber ?? null,
+    surahName: metadata.surahName || null,
+    ayahNumber: metadata.ayahNumber ?? null,
   };
 }
 

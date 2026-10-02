@@ -92,6 +92,7 @@ function createAIOrchestrator({
     questionId,
     text,
     language,
+    retrievalLanguages,
   }) {
     if (!questionId || typeof questionId !== "string") {
       throw new Error("questionId is required");
@@ -130,7 +131,10 @@ function createAIOrchestrator({
 
     // 4. Retrieval
     const evidence =
-      await retriever.retrieve(text);
+      await retriever.retrieve(text, {
+        category: classification.category,
+        sourceLanguages: retrievalLanguages,
+      });
 
     // 5. Evidence sufficiency
     const evidenceCheck =

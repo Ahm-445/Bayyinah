@@ -7,7 +7,7 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test src/modules/ai/classifier/questionClassifier.test.js src/modules/ai/orchestrator/retrievalFilters.test.js src/modules/ai/rag/citation/citationBuilder.test.js src/modules/ai/rag/ingestion/ingestionPipeline.test.js src/modules/ai/rag/ingestion/quran/quranChunkBuilder.test.js src/modules/ai/rag/ingestion/quran/quranParser.test.js src/modules/ai/rag/ingestion/sourceContract.test.js src/modules/ai/rag/retrieval/vectorRetriever.filter.test.js src/modules/ai/rag/storage/vectorIndex.behavior.test.js"
   },
   "keywords": [],
   "author": "",

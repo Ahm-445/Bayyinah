@@ -1,3 +1,5 @@
+const { formatEvidence } = require("./evidenceFormatter");
+
 /**
  * Builds the prompt used to generate a Bayyinah draft.
  *
@@ -33,19 +35,7 @@ function buildGenerationPrompt({
     );
   }
 
-  const evidenceText = evidence
-    .map((item, index) => {
-      return [
-        `Evidence ${index + 1}:`,
-        `Source ID: ${item.sourceId}`,
-        `Chunk ID: ${item.chunkId}`,
-        `Text: ${item.text}`,
-        `Reference: ${
-          item.citation?.reference || "Not provided"
-        }`,
-      ].join("\n");
-    })
-    .join("\n\n");
+  const evidenceText = formatEvidence(evidence);
 
   return `
 You are assisting a Da'i on the Bayyinah platform.

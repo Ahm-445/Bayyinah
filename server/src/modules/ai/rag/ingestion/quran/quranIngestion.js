@@ -1,5 +1,5 @@
 const { parseQuranpediaDump, extractHafsAyahs } = require('./quranParser');
-const { buildQuranChunk } = require('./quranChunkBuilder');
+const { buildQuranChunk, SOURCE_ID } = require('./quranChunkBuilder');
 
 const COLLECTION_NAME = 'knowledge_chunks';
 const DEFAULT_BATCH_SIZE = 32;
@@ -19,7 +19,7 @@ async function ingestQuran({ db, embeddingProvider, dumpPath, batchSize = DEFAUL
   let written = 0;
   for (let start = 0; start < ayahs.length; start += batchSize) {
     const batch = ayahs.slice(start, start + batchSize);
-    const chunks = batch.map((ayah) => buildQuranChunk(ayah, sourceVersion));
+    const chunks = batch.map((ayah) => buildQuranChunk(ayah, { sourceVersion }));
 
     let embeddings;
     if (typeof embeddingProvider.embedBatch === 'function') {
@@ -68,7 +68,7 @@ async function ingestQuran({ db, embeddingProvider, dumpPath, batchSize = DEFAUL
   }
 
   return {
-    sourceId: 'quran-quranpedia-hafs',
+    sourceId: SOURCE_ID,
     sourceVersion,
     surahs: 114,
     ayahs: ayahs.length,

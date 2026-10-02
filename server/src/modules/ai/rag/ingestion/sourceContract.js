@@ -13,6 +13,10 @@
  * @param {string} input.type
  * @param {string} input.language
  * @param {string} input.reference
+ * @param {string} input.url
+ * @param {string} input.version
+ * @param {string} [input.license]
+ * @param {string} [input.usageBasis]
  * @param {boolean} input.approved
  * @returns {Object}
  */
@@ -22,6 +26,11 @@ function createSource({
   type,
   language,
   reference,
+  url,
+  version,
+  license,
+  usageBasis,
+  metadata = {},
   approved,
 }) {
   if (!sourceId || typeof sourceId !== "string") {
@@ -44,6 +53,46 @@ function createSource({
     throw new Error("Source reference is required");
   }
 
+  if (!url || typeof url !== "string") {
+    throw new Error("Source URL is required");
+  }
+
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(url);
+  } catch {
+    throw new Error("Source URL must be a valid HTTP or HTTPS URL");
+  }
+  if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+    throw new Error("Source URL must be a valid HTTP or HTTPS URL");
+  }
+
+  if (!version || typeof version !== "string" || !version.trim()) {
+    throw new Error("Source version is required");
+  }
+
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    throw new Error("Source metadata must be an object");
+  }
+
+  if (license !== undefined && license !== null && typeof license !== "string") {
+    throw new Error("Source license must be a string");
+  }
+
+  if (
+    usageBasis !== undefined &&
+    usageBasis !== null &&
+    typeof usageBasis !== "string"
+  ) {
+    throw new Error("Source usage basis must be a string");
+  }
+
+  const normalizedLicense = license?.trim() || null;
+  const normalizedUsageBasis = usageBasis?.trim() || null;
+  if (!normalizedLicense && !normalizedUsageBasis) {
+    throw new Error("Source license or usage basis is required");
+  }
+
   if (typeof approved !== "boolean") {
     throw new Error("approved must be a boolean");
   }
@@ -58,6 +107,11 @@ function createSource({
     type: type.trim(),
     language: language.toLowerCase(),
     reference: reference.trim(),
+    url: parsedUrl.toString(),
+    version: version.trim(),
+    license: normalizedLicense,
+    usageBasis: normalizedUsageBasis,
+    metadata,
     approved,
   };
 }
