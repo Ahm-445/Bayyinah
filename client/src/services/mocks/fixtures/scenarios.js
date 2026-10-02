@@ -13,7 +13,8 @@ import { EVIDENCE as E, citationsFor, weak } from './evidence.js'
 //   drf_7  already approved                 → published as ans_1
 // q_2 has two published answers (ans_1, ans_2) for the compare screen.
 
-const t = (day, time) => `2026-10-0${day}T${time}:00.000Z`
+// Timestamps relative to when the mock data is first created.
+const ago = (minutes) => new Date(Date.now() - minutes * 60_000).toISOString()
 
 function classification(category, level, risk, action) {
   return { category, level, risk, action, reasons: [] }
@@ -35,13 +36,13 @@ const PASS = {
 }
 
 export const QUESTIONS = [
-  question('q_1', 'Who is God in Islam?', classification('aqeedah', 'A', 'low', 'ANSWER'), 'awaiting_review', t(4, '09:10')),
-  question('q_2', 'What is the purpose of life in Islam?', classification('aqeedah', 'A', 'low', 'ANSWER'), 'answered', t(4, '08:30')),
-  question('q_3', 'Does Islam teach that all people are equal?', classification('general_islam', 'B', 'medium', 'ANSWER'), 'awaiting_review', t(4, '09:25')),
-  question('q_4', 'What does Islam say about the age of the universe?', classification('general_islam', 'B', 'low', 'ANSWER'), 'awaiting_review', t(4, '09:40')),
-  question('q_5', "What was the mission of Prophet Muhammad according to the Qur'an?", classification('seerah_history', 'A', 'low', 'ANSWER'), 'awaiting_review', t(4, '09:55')),
-  question('q_6', 'My father is not Muslim. Am I allowed to attend his holiday dinner?', classification('fiqh', 'D', 'high', 'REFER'), 'referred', t(4, '10:05')),
-  question('q_7', 'What about the thing in that chapter?', classification('other', 'A', 'low', 'CLARIFY'), 'awaiting_review', t(4, '10:15')),
+  question('q_1', 'Who is God in Islam?', classification('aqeedah', 'A', 'low', 'ANSWER'), 'awaiting_review', ago(50)),
+  question('q_2', 'What is the purpose of life in Islam?', classification('aqeedah', 'A', 'low', 'ANSWER'), 'answered', ago(180)),
+  question('q_3', 'Does Islam teach that all people are equal?', classification('general_islam', 'B', 'medium', 'ANSWER'), 'awaiting_review', ago(35)),
+  question('q_4', 'What does Islam say about the age of the universe?', classification('general_islam', 'B', 'low', 'ANSWER'), 'awaiting_review', ago(25)),
+  question('q_5', "What was the mission of Prophet Muhammad according to the Qur'an?", classification('seerah_history', 'A', 'low', 'ANSWER'), 'awaiting_review', ago(15)),
+  question('q_6', 'My father is not Muslim. Am I allowed to attend his holiday dinner?', classification('fiqh', 'D', 'high', 'REFER'), 'referred', ago(10)),
+  question('q_7', 'What about the thing in that chapter?', classification('other', 'A', 'low', 'CLARIFY'), 'awaiting_review', ago(5)),
 ]
 
 function draft(fields) {
@@ -186,7 +187,7 @@ export const ANSWERS = [
     citations: citationsFor([E.dhariyat56]),
     verificationStatus: 'PASS',
     aiAssisted: true,
-    publishedAt: t(4, '08:50'),
+    publishedAt: ago(150),
     _questionId: 'q_2',
     _draftId: 'drf_7',
   },
@@ -198,7 +199,7 @@ export const ANSWERS = [
     citations: citationsFor([E.dhariyat56, E.anbiya107]),
     verificationStatus: 'NEEDS_REVIEW',
     aiAssisted: true,
-    publishedAt: t(4, '09:05'),
+    publishedAt: ago(120),
     _questionId: 'q_2',
     _draftId: null,
   },

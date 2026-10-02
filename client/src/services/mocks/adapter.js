@@ -6,21 +6,56 @@ import { ANSWERS, DRAFTS, QUESTIONS } from './fixtures/scenarios.js'
 import { SOURCES } from './fixtures/sources.js'
 import { USERS } from './fixtures/users.js'
 
-// In-memory mock of the REST API in docs/api.md, part 2.
-// State lives for the page session; reload to reset.
+// Mock of the REST API in docs/api.md, part 2.
+// State is persisted to localStorage so it survives reloads and is shared
+// between tabs (questioner tab + dāʿī tab). resetMockData() restores the seed.
 // Error codes used here are only the ones api.md defines
 // (already_selected, blocked, warnings_not_acknowledged); other errors have no code.
 
-const db = {
-  questions: structuredClone(QUESTIONS),
-  drafts: structuredClone(DRAFTS),
-  answers: structuredClone(ANSWERS),
-  users: structuredClone(USERS),
-  selections: new Map(), // `${sessionId}:${questionId}` → answerId
+const STORAGE_KEY = 'bayyinah.mockDb.v1'
+
+function seed() {
+  return {
+    questions: structuredClone(QUESTIONS),
+    drafts: structuredClone(DRAFTS),
+    answers: structuredClone(ANSWERS),
+    users: structuredClone(USERS),
+    selections: {}, // `${sessionId}:${questionId}` → answerId
+    nextId: 100,
+  }
 }
 
-let nextId = 100
-const newId = (prefix) => `${prefix}_${nextId++}`
+// Falls back to in-memory state when storage is unavailable.
+function load(current) {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {
+    // ignore: storage blocked or corrupt
+  }
+  return current ?? seed()
+}
+
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(db))
+  } catch {
+    // ignore: storage blocked or full
+  }
+}
+
+let db = load()
+
+export function resetMockData() {
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+  } catch {
+    // ignore
+  }
+  db = seed()
+}
+
+const newId = (prefix) => `${prefix}_${db.nextId++}`
 const now = () => new Date().toISOString()
 
 const fail = (status, message, code) => {
@@ -182,7 +217,7 @@ const routes = [
   ['GET', '/questions/:id/answers', ({ params, sessionId }) => {
     const q = findQuestion(params.id, sessionId)
     return {
-      selectedAnswerId: db.selections.get(`${sessionId}:${q.id}`) ?? null,
+      selectedAnswerId: db.selections[`${sessionId}:${q.id}`] ?? null,
       answers: db.answers.filter((a) => a._questionId === q.id).map(publicView),
     }
   }],
@@ -190,8 +225,8 @@ const routes = [
     const answer = db.answers.find((a) => a.id === params.id)
     if (!answer) fail(404, 'Answer not found.')
     const key = `${sessionId}:${answer._questionId}`
-    if (db.selections.has(key)) fail(409, 'You already selected an answer for this question.', 'already_selected')
-    db.selections.set(key, answer.id)
+    if (db.selections[key]) fail(409, 'You already selected an answer for this question.', 'already_selected')
+    db.selections[key] = answer.id
     return [201, { selected: true }]
   }],
 
@@ -292,6 +327,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export async function mockRequest(method, path, { body } = {}) {
   await sleep(config.mockLatencyMs)
+  db = load(db) // pick up changes made in another tab
   const cleanPath = path.split('?')[0]
 
   let status = 200
@@ -312,6 +348,7 @@ export async function mockRequest(method, path, { body } = {}) {
       }
       let result = route.handler(ctx)
       if (Array.isArray(result)) [status, result] = result
+      save() // GETs can change state too (simulated pipeline progress)
       console.debug(`[mock] ${method} ${path} → ${status}`)
       // Clone so the UI can never mutate mock state by reference.
       return structuredClone(result)

@@ -1,5 +1,10 @@
 import { Link } from 'react-router'
-import { config } from '../../services/config.js'
+
+async function resetMocks() {
+  const { resetMockData } = await import('../../services/mocks/adapter.js')
+  resetMockData()
+  window.location.reload()
+}
 
 export default function AppHeader({ homeTo, children }) {
   return (
@@ -11,10 +16,16 @@ export default function AppHeader({ homeTo, children }) {
             بيّنة
           </span>
         </Link>
-        {config.useMocks && (
-          <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-            Mock API
-          </span>
+        {/* Inline env check so real-API builds drop this and the mock import. */}
+        {import.meta.env.VITE_USE_MOCKS === 'true' && (
+          <button
+            type="button"
+            onClick={resetMocks}
+            title="Reset mock data to the seed fixtures"
+            className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-200"
+          >
+            Mock API · reset
+          </button>
         )}
         <div className="ml-auto flex items-center gap-4 text-sm">{children}</div>
       </div>
