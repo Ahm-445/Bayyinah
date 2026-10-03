@@ -1,7 +1,18 @@
 import { userMessage } from '../../../services/errors.js'
 import AiNotice from '../../../shared/components/AiNotice.jsx'
+import CitedText from '../../../shared/components/CitedText.jsx'
+import SourcesInAnswer from './SourcesInAnswer.jsx'
 
-export default function DraftEditor({ draft, value, onChange, onSave, saving, saveError }) {
+export default function DraftEditor({
+  draft,
+  value,
+  onChange,
+  onFocus,
+  textareaRef,
+  onSave,
+  saving,
+  saveError,
+}) {
   const dirty = value !== draft.text
   const isOriginal = value === draft.generatedText
 
@@ -23,10 +34,12 @@ export default function DraftEditor({ draft, value, onChange, onSave, saving, sa
           </label>
           <textarea
             id="draft-text"
+            ref={textareaRef}
             dir="auto"
             lang={draft.question.language}
             value={value}
             onChange={(e) => onChange(e.target.value)}
+            onFocus={onFocus}
             rows={14}
             className="w-full rounded-lg border border-stone-300 bg-white p-4 leading-relaxed focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 focus:outline-none"
           />
@@ -53,15 +66,16 @@ export default function DraftEditor({ draft, value, onChange, onSave, saving, sa
               </span>
             )}
           </div>
+          <SourcesInAnswer text={value} evidence={draft.evidence} />
         </>
       ) : (
-        <div
-          dir="auto"
+        <CitedText
+          text={draft.text}
+          citations={draft.evidence}
+          showUnknown
           lang={draft.question.language}
-          className="rounded-lg border border-stone-200 bg-stone-50 p-4 leading-relaxed whitespace-pre-wrap text-stone-800"
-        >
-          {draft.text}
-        </div>
+          className="rounded-lg border border-stone-200 bg-stone-50 p-4 leading-relaxed text-stone-800"
+        />
       )}
     </section>
   )

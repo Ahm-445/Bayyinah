@@ -9,8 +9,11 @@ export function mapCitation(raw) {
     chunkId: raw.chunkId,
     sourceTitle: raw.sourceTitle ?? null,
     reference: raw.reference ?? null,
-    // Not in api.md today; used only if the backend ever sends it.
+    // Not in api.md today; used only if the backend ever sends them.
     text: raw.text ?? null,
+    sourceType: raw.sourceType ?? null,
+    surahNumber: raw.surahNumber ?? null,
+    ayahNumber: raw.ayahNumber ?? null,
   }
 }
 
@@ -25,6 +28,7 @@ export function mapEvidence(raw) {
     sourceTitle: citation.sourceTitle ?? null,
     reference: citation.reference ?? null,
     // Optional: not in api.md today.
+    sourceType: citation.sourceType ?? null,
     surahNumber: citation.surahNumber ?? null,
     ayahNumber: citation.ayahNumber ?? null,
   }

@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Link, useBeforeUnload, useBlocker, useParams } from 'react-router'
 import QueryState from '../../../shared/components/QueryState.jsx'
+import { markerFor, markerIds } from '../../../shared/lib/citations.js'
 import { DRAFT_VIEW } from '../../../shared/lib/enums.js'
 import DraftEditor from '../components/DraftEditor.jsx'
 import EvidencePanel from '../components/EvidencePanel.jsx'
@@ -59,7 +60,7 @@ function DraftReview({ draft }) {
             <ReviewActions draft={draft} unsavedText={null} allowApprove={false} />
           </div>
           <div className="lg:col-span-5">
-            <EvidencePanel evidence={draft.evidence} citations={draft.citations} />
+            <EvidencePanel evidence={draft.evidence} />
           </div>
         </div>
       )}
@@ -71,6 +72,28 @@ function ReviewBody({ draft }) {
   const [text, setText] = useState(draft.text)
   const save = useSaveDraft(draft.id)
   const dirty = draft.canEdit && text !== draft.text
+  const textareaRef = useRef(null)
+  const editorFocused = useRef(false) // until the dāʿī places a caret, insert at the end
+  const citedIds = new Set(markerIds(draft.canEdit ? text : draft.text))
+
+  /**
+   * Inserts the evidence's [[chunkId]] marker at the caret, replacing any
+   * selection. A textarea keeps its selection after losing focus, so it is
+   * read directly when the "Insert citation" button is clicked.
+   */
+  function insertCitation(evidence) {
+    const el = textareaRef.current
+    const start = editorFocused.current && el ? el.selectionStart : text.length
+    const end = editorFocused.current && el ? el.selectionEnd : text.length
+    const before = text.slice(0, start)
+    const insert = (before && !/\s$/.test(before) ? ' ' : '') + markerFor(evidence.chunkId)
+    const caret = start + insert.length
+    setText(before + insert + text.slice(end))
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus()
+      textareaRef.current?.setSelectionRange(caret, caret)
+    })
+  }
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname,
@@ -91,6 +114,8 @@ function ReviewBody({ draft }) {
           draft={draft}
           value={text}
           onChange={setText}
+          onFocus={() => (editorFocused.current = true)}
+          textareaRef={textareaRef}
           onSave={() => save.mutate(text)}
           saving={save.isPending}
           saveError={save.error}
@@ -99,7 +124,11 @@ function ReviewBody({ draft }) {
       </div>
       <div className="space-y-4 lg:col-span-5">
         <VerificationPanel verification={draft.verification} />
-        <EvidencePanel evidence={draft.evidence} citations={draft.citations} />
+        <EvidencePanel
+          evidence={draft.evidence}
+          citedIds={citedIds}
+          onInsert={draft.canEdit ? insertCitation : undefined}
+        />
       </div>
 
       {blocker.state === 'blocked' && (

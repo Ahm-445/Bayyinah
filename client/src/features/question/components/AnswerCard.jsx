@@ -1,30 +1,42 @@
+import CitedText from '../../../shared/components/CitedText.jsx'
 import EvidenceCard from '../../../shared/components/EvidenceCard.jsx'
+import { inlineLabel } from '../../../shared/lib/citations.js'
 import { fullDate, timeAgo } from '../../../shared/lib/format.js'
 import { textDirProps } from '../../../shared/lib/text.js'
 
+/** Collapsed list of the answer's sources. Not rendered when there are none. */
 function Sources({ citations }) {
   if (!citations.length) return null
-  // Citation text is optional (not in api.md today): show cards only if present.
-  const withText = citations.filter((c) => c.text)
+  // Citation text is optional (not in api.md today): show full cards only if every source has it.
+  const allHaveText = citations.every((c) => c.text)
   return (
-    <div className="space-y-2">
-      <h4 className="text-xs font-semibold tracking-wide text-stone-500 uppercase">Sources</h4>
-      {withText.length === citations.length ? (
-        withText.map((c) => <EvidenceCard key={c.key} evidence={c} />)
-      ) : (
-        <ul className="flex flex-wrap gap-2">
-          {citations.map((c) => (
-            <li
-              key={c.key}
-              {...textDirProps(c.reference ?? c.chunkId)}
-              className="rounded bg-stone-100 px-2 py-0.5 text-sm text-stone-700"
-            >
-              {c.reference ?? c.chunkId}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <details>
+      <summary className="cursor-pointer text-sm font-medium text-emerald-800 hover:text-emerald-950">
+        View sources ({citations.length})
+      </summary>
+      <div className="mt-2">
+        {allHaveText ? (
+          <div className="space-y-2">
+            {citations.map((c) => (
+              <EvidenceCard key={c.key} evidence={c} />
+            ))}
+          </div>
+        ) : (
+          <ul className="space-y-1 text-sm">
+            {citations.map((c) => (
+              <li key={c.key} className="flex flex-wrap items-baseline gap-x-2">
+                <span className="font-medium text-stone-800">{inlineLabel(c)}</span>
+                {c.reference && (
+                  <span {...textDirProps(c.reference)} className="text-stone-600">
+                    {c.reference}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </details>
   )
 }
 
@@ -45,23 +57,29 @@ export default function AnswerCard({ answer, index, selected, canSelect, onSelec
           <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 font-medium text-emerald-800 ring-1 ring-emerald-600/20 ring-inset">
             Reviewed by a dāʿī
           </span>
-          <span className="text-stone-500">
-            {answer.sourceCount} source{answer.sourceCount === 1 ? '' : 's'}
-          </span>
+          {answer.sourceCount > 0 && (
+            <span className="text-stone-500">
+              {answer.sourceCount} source{answer.sourceCount === 1 ? '' : 's'}
+            </span>
+          )}
         </div>
       </header>
 
-      <p dir="auto" className="mt-4 flex-1 leading-relaxed whitespace-pre-wrap text-stone-800">
-        {answer.finalText}
-      </p>
+      <CitedText
+        text={answer.finalText}
+        citations={answer.citations}
+        className="mt-4 flex-1 leading-relaxed text-stone-800"
+      />
 
-      <div className="mt-4">
-        <Sources citations={answer.citations} />
-      </div>
+      {answer.citations.length > 0 && (
+        <div className="mt-4">
+          <Sources citations={answer.citations} />
+        </div>
+      )}
 
       <footer className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-3">
         <span className="text-xs text-stone-500" title={fullDate(answer.publishedAt)}>
-          {answer.aiAssisted ? 'Prepared with AI assistance' : 'Written by a dāʿī'}
+          {answer.aiAssisted ? 'Prepared with AI assistance' : 'Written directly by the dāʿī'}
           {answer.publishedAt && ` · ${timeAgo(answer.publishedAt)}`}
         </span>
         {selected ? (

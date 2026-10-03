@@ -5,7 +5,7 @@ import { textDirProps } from '../lib/text.js'
  * Arabic text renders RTL in the Arabic font; anything else uses dir="auto".
  * `evidence` is a mapped evidence item (services/mappers/common.js).
  */
-export default function EvidenceCard({ evidence, cited = false }) {
+export default function EvidenceCard({ evidence, cited = false, action = null }) {
   const textProps = textDirProps(evidence.text)
   return (
     <article className="rounded-lg border border-stone-200 bg-white p-4">
@@ -29,6 +29,7 @@ export default function EvidenceCard({ evidence, cited = false }) {
       >
         {evidence.text}
       </p>
+      {action && <div className="mt-3 border-t border-stone-100 pt-2">{action}</div>}
     </article>
   )
 }

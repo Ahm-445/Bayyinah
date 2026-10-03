@@ -1,3 +1,4 @@
+import { markerIds } from '../../shared/lib/citations.js'
 import { config } from '../config.js'
 import { ApiError } from '../errors.js'
 import { clearAuth, getAuth, getSessionId } from '../session.js'
@@ -12,7 +13,7 @@ import { USERS } from './fixtures/users.js'
 // Error codes used here are only the ones api.md defines
 // (already_selected, blocked, warnings_not_acknowledged); other errors have no code.
 
-const STORAGE_KEY = 'bayyinah.mockDb.v1'
+const STORAGE_KEY = 'bayyinah.mockDb.v2'
 
 function seed() {
   return {
@@ -101,7 +102,7 @@ function advanceQuestion(q) {
   const evidence = personal ? [] : [EVIDENCE.dhariyat56]
   const generatedText = personal
     ? null
-    : `[Mock draft] This is a placeholder AI draft for: "${q.text}". The Qur'an states that God created humans and jinn to worship Him (51:56).`
+    : `[Mock draft] This is a placeholder AI draft for: "${q.text}". The Qur'an states that God created humans and jinn to worship Him [[quran-hafs-51-56]].`
 
   for (const daee of daees) {
     db.drafts.push({
@@ -275,13 +276,22 @@ const routes = [
       fail(422, 'Please acknowledge the verification warnings before approving.', 'warnings_not_acknowledged')
     }
     const user = db.users.find((u) => u.id === draft._daeeId) ?? ctx.user
+    // Sources follow the text (pending backend agreement): the published
+    // citations are rebuilt from the [[chunkId]] markers left in the final
+    // text, matched against the draft's evidence. The AI draft's original
+    // citation list is not carried over.
+    const evidenceById = new Map(draft.evidence.map((e) => [e.chunkId, e]))
+    const cited = markerIds(draft.text)
+      .filter((id) => evidenceById.has(id))
+      .map((id) => evidenceById.get(id))
     const answer = {
       id: newId('ans'),
       daee: { id: user.id, displayName: user.displayName },
       finalText: draft.text,
-      citations: draft.citations,
+      citations: citationsFor(cited),
       verificationStatus: draft.verification?.status ?? 'NEEDS_REVIEW',
-      aiAssisted: true,
+      // AI-assisted only while at least one AI-retrieved source is still cited.
+      aiAssisted: cited.length > 0,
       publishedAt: now(),
       _questionId: draft.question.id,
       _draftId: draft.id,

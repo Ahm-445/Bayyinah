@@ -69,7 +69,7 @@ function draft(fields) {
 
 const ikhlas = [E.ikhlas1, E.ikhlas2, E.ikhlas3, E.ikhlas4]
 const IKHLAS_TEXT =
-  'In Islam, God (Allah in Arabic) is One, with no partner and no equal. The Qur\'an summarises this in a short chapter, Surat al-Ikhlas: God is One (112:1), the One on whom all depend while He depends on no one (112:2), He neither begets nor was begotten (112:3), and nothing is comparable to Him (112:4). This belief in the absolute oneness of God, called tawhid, is the foundation of the Islamic faith.'
+  'In Islam, God (Allah in Arabic) is One, with no partner and no equal. The Qur\'an summarises this in a short chapter, Surat al-Ikhlas: God is One [[quran-hafs-112-1]], the One on whom all depend while He depends on no one [[quran-hafs-112-2]], He neither begets nor was begotten [[quran-hafs-112-3]], and nothing is comparable to Him [[quran-hafs-112-4]]. This belief in the absolute oneness of God, called tawhid, is the foundation of the Islamic faith.'
 
 export const DRAFTS = [
   draft({
@@ -101,7 +101,7 @@ export const DRAFTS = [
     aiAction: 'ANSWER',
     safety: { decision: 'REVIEW', reason: 'Medium-risk topic: dāʿī review recommended.' },
     generatedText:
-      "The Qur'an addresses all of humanity and states that people were created from a male and a female and made into nations and tribes so that they may know one another. It adds that the most honoured of people in the sight of God is the most righteous (49:13). Islam therefore teaches that no race or nation is superior by birth, and that people are distinguished only by their piety and conduct.",
+      "The Qur'an addresses all of humanity and states that people were created from a male and a female and made into nations and tribes so that they may know one another. It adds that the most honoured of people in the sight of God is the most righteous [[quran-hafs-49-13]]. Islam therefore teaches that no race or nation is superior by birth, and that people are distinguished only by their piety and conduct.",
     evidence: [E.hujurat13],
     citations: citationsFor([E.hujurat13]),
     verification: {
@@ -129,7 +129,7 @@ export const DRAFTS = [
     status: 'blocked',
     aiAction: 'ABSTAIN',
     generatedText:
-      "The Qur'an describes the mission of Prophet Muhammad as a mercy to all the worlds (21:107). It also states that he was sent to complete good character.",
+      "The Qur'an describes the mission of Prophet Muhammad as a mercy to all the worlds [[quran-hafs-21-107]]. It also states that he was sent to complete good character [[quran-hafs-68-4]].",
     evidence: [E.anbiya107],
     citations: [
       ...citationsFor([E.anbiya107]),
@@ -171,7 +171,7 @@ export const DRAFTS = [
     status: 'approved',
     aiAction: 'ANSWER',
     generatedText:
-      "According to the Qur'an, God created humans and jinn to worship Him (51:56).",
+      "According to the Qur'an, God created humans and jinn to worship Him [[quran-hafs-51-56]].",
     evidence: [E.dhariyat56],
     citations: citationsFor([E.dhariyat56]),
     verification: PASS,
@@ -183,7 +183,7 @@ export const ANSWERS = [
     id: 'ans_1',
     daee: { id: 'usr_daee_1', displayName: 'Ustadh Khalid' },
     finalText:
-      "The Qur'an states that God created humans and jinn to worship Him (Adh-Dhariyat 51:56). In Islam, worship is broad: it includes prayer and remembrance, but also honesty, kindness to parents, seeking knowledge and helping others when done for God's sake. So the purpose of life is to know God and live every part of life in a way that pleases Him.",
+      "The Qur'an states that God created humans and jinn to worship Him [[quran-hafs-51-56]]. In Islam, worship is broad: it includes prayer and remembrance, but also honesty, kindness to parents, seeking knowledge and helping others when done for God's sake. So the purpose of life is to know God and live every part of life in a way that pleases Him.",
     citations: citationsFor([E.dhariyat56]),
     verificationStatus: 'PASS',
     aiAssisted: true,
@@ -195,7 +195,7 @@ export const ANSWERS = [
     id: 'ans_2',
     daee: { id: 'usr_daee_2', displayName: 'Ustadha Maryam' },
     finalText:
-      "Islam teaches that life has a clear purpose: to worship the One God (51:56). Worship here means a relationship with your Creator expressed through prayer, good character and service to people. The Prophet was described as a mercy to all the worlds (21:107), and Muslims try to follow that example of mercy in daily life.",
+      "Islam teaches that life has a clear purpose: to worship the One God [[quran-hafs-51-56]]. Worship here means a relationship with your Creator expressed through prayer, good character and service to people. The Prophet was described as a mercy to all the worlds [[quran-hafs-21-107]], and Muslims try to follow that example of mercy in daily life.",
     citations: citationsFor([E.dhariyat56, E.anbiya107]),
     verificationStatus: 'NEEDS_REVIEW',
     aiAssisted: true,
