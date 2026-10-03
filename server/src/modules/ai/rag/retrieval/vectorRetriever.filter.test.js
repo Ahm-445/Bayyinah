@@ -1,5 +1,8 @@
 const assert = require("assert");
-const { createVectorRetriever } = require("./vectorRetriever");
+const {
+  createVectorRetriever,
+  ALLOWED_CATEGORIES_BY_QUESTION,
+} = require("./vectorRetriever");
 
 async function main() {
   let capturedPipeline;
@@ -48,12 +51,18 @@ async function main() {
     category: "aqeedah",
     sourceLanguages: ["AR", "en"],
   });
+  assert.deepStrictEqual(ALLOWED_CATEGORIES_BY_QUESTION.quran, ["quran", "translation"]);
+  assert.deepStrictEqual(ALLOWED_CATEGORIES_BY_QUESTION.translation, ["translation", "terminology", "quran"]);
+  assert.deepStrictEqual(ALLOWED_CATEGORIES_BY_QUESTION.aqeedah, ["aqeedah", "quran", "translation", "hadith", "tafsir"]);
   assert.deepStrictEqual(capturedPipeline[0].$vectorSearch.filter, {
     "metadata.approved": { $eq: true },
     "metadata.category": {
-      $in: ["aqeedah", "quran", "hadith", "tafsir"],
+      $in: ["aqeedah", "quran", "translation", "hadith", "tafsir"],
     },
-    "metadata.language": { $in: ["ar", "en"] },
+    $or: [
+      { "metadata.language": { $in: ["ar", "en"] } },
+      { "metadata.languages": { $in: ["ar", "en"] } },
+    ],
   });
   assert.strictEqual(evidence.length, 1);
   assert.strictEqual(evidence[0].citation.reference, "Test ref");

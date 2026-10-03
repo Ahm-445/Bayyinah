@@ -60,6 +60,14 @@ function hasExplanationIndicators(questionText) {
     "meaning of",
     "define",
     "definition",
+    "ما معنى",
+    "معنى",
+    "اشرح",
+    "شرح",
+    "تفسير",
+    "لماذا",
+    "كيف",
+    "ما المقصود",
   ];
 
   return indicators.some((indicator) =>

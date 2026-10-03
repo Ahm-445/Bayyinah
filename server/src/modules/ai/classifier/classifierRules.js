@@ -197,6 +197,8 @@ const CLASSIFIER_RULES = Object.freeze({
       "ruling",
       "permissible",
       "impermissible",
+      "يجوز",
+      "الطلاق",
       "halal",
       "haram",
       "فقه",

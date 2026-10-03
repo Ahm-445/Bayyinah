@@ -12,6 +12,30 @@ const {
 
 const { buildCitations } = require("../rag/citation/citationBuilder");
 
+const ENGLISH_ARABIC_TAFSIR_NOTICE =
+  "This is an English explanation of the original Arabic source, not an English source quotation.";
+
+function hasArabicTafsirEvidence(evidence) {
+  return evidence.some((item) => {
+    const citation = item.citation || {};
+    const sourceType = citation.sourceType || citation.category;
+    const languages = [citation.language, ...(citation.languages || [])]
+      .filter(Boolean)
+      .map((value) => String(value).toLowerCase());
+    return sourceType === "tafsir" && languages.some((value) => value === "ar" || value === "ar-en");
+  });
+}
+
+function preserveEnglishTafsirNotice(answer, language, evidence) {
+  if (language !== "en" || !hasArabicTafsirEvidence(evidence)) return answer;
+
+  const firstSentence = answer.trim().split(/[.!?。！？]/, 1)[0];
+  const equivalentNotice = /english explanation/i.test(firstSentence) &&
+    /arabic (?:tafsir|source)/i.test(firstSentence) &&
+    /not (?:the )?original|not .*quotation|not .*quote/i.test(firstSentence);
+  return equivalentNotice ? answer : `${ENGLISH_ARABIC_TAFSIR_NOTICE} ${answer}`;
+}
+
 /**
  * Creates a draft generator.
  *
@@ -54,12 +78,19 @@ function createDraftGenerator({
     const answer = await llm.generate(prompt, {
       model,
       temperature: 0.2,
+      maxOutputTokens: 1200,
+      taskType: "draft_generation",
     });
 
+    const answerWithSourceNotice = preserveEnglishTafsirNotice(
+      answer,
+      language,
+      evidence
+    );
     const citations = buildCitations(evidence);
 
     return createDraft({
-      answer,
+      answer: answerWithSourceNotice,
       language,
       citations,
     });
@@ -72,4 +103,6 @@ function createDraftGenerator({
 
 module.exports = {
   createDraftGenerator,
+  ENGLISH_ARABIC_TAFSIR_NOTICE,
+  preserveEnglishTafsirNotice,
 };

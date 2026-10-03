@@ -20,6 +20,10 @@ function getIndexFields() {
       type: "filter",
       path: "metadata.language",
     },
+    {
+      type: "filter",
+      path: "metadata.languages",
+    },
   ];
 }
 

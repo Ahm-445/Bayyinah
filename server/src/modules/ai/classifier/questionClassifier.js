@@ -6,6 +6,7 @@ const { detectCategory } = require("./categoryDetector");
 const { detectLevel } = require("./levelDetector");
 const { detectRisk } = require("./riskDetector");
 const { detectAction } = require("./actionDetector");
+const { detectLanguage } = require("./languageDetector");
 
 /**
  * Classifies a question through the initial Bayyinah
@@ -27,6 +28,7 @@ function classifyQuestion(questionText) {
   }
 
   const category = detectCategory(questionText);
+  const language = detectLanguage(questionText);
   const level = detectLevel(questionText);
   const risk = detectRisk(level);
   const action = detectAction(level);
@@ -43,6 +45,7 @@ function classifyQuestion(questionText) {
     level,
     risk,
     action,
+    language,
     reasons,
   });
 }

@@ -6,9 +6,25 @@ node_modules/
 dist/
 build/
 coverage/
+.nyc_output/
+test-results/
+playwright-report/
+logs/
+**/logs/
+*.tmp
+*.temp
+*.bak
+*.out
+.cache/
 
 *.log
 .DS_Store
+Thumbs.db
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+.idea/
 
 .vscode/*
 !.vscode/extensions.json

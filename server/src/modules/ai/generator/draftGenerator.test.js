@@ -1,108 +1,41 @@
-require("dotenv").config({
-  path: require("path").resolve(__dirname, "../../../../.env"),
+const assert = require("node:assert/strict");
+const test = require("node:test");
+const { createDraftGenerator, ENGLISH_ARABIC_TAFSIR_NOTICE } = require("./draftGenerator");
+
+test("English Al-Fatihah tafsir answer starts with a clear Arabic-tafsir explanation notice", async () => {
+  let generationOptions;
+  const generator = createDraftGenerator({
+    llmProvider: {
+      async generate(_prompt, options) {
+        generationOptions = options;
+        return "The opening praises Allah and describes Him as merciful.";
+      },
+    },
+  });
+  const draft = await generator.generateDraft({
+    question: "What does the beginning of Surah Al-Fatihah mean?",
+    language: "en",
+    evidence: [{
+      sourceId: "tafsir-source",
+      chunkId: "tafsir-1",
+      text: "Arabic tafsir excerpt",
+      citation: { sourceType: "tafsir", language: "ar" },
+    }],
+  });
+  assert.ok(draft.answer.startsWith(ENGLISH_ARABIC_TAFSIR_NOTICE));
+  assert.match(draft.answer.split(".", 1)[0], /English explanation.*Arabic source/);
+  assert.match(draft.answer.split(".", 1)[0], /not an English source quotation/);
+  assert.equal(draft.language, "en");
+  assert.equal(generationOptions.maxOutputTokens, 1200);
+  assert.equal(generationOptions.taskType, "draft_generation");
 });
 
-const {
-  createVoyageEmbeddingProvider,
-} = require("../providers/voyageEmbeddingProvider");
-
-const {
-  createGeminiLLMProvider,
-} = require("../providers/geminiLLMProvider");
-
-const {
-  createRetriever,
-} = require("../rag/retrieval/retriever");
-
-const {
-  connectMongo,
-  closeMongo,
-} = require("../rag/storage/mongoClient");
-
-const {
-  createDraftGenerator,
-} = require("./draftGenerator");
-
-async function main() {
-  const db = await connectMongo();
-
-  const embeddingProvider =
-    createVoyageEmbeddingProvider();
-
-  const retriever = createRetriever({
-    db,
-    embeddingProvider,
-    topK: 3,
+test("English tafsir notice does not alter Arabic drafts or non-tafsir sources", async () => {
+  const generator = createDraftGenerator({ llmProvider: { async generate() { return "An answer."; } } });
+  const draft = await generator.generateDraft({
+    question: "What is this?",
+    language: "en",
+    evidence: [{ sourceId: "quran", chunkId: "q-1", text: "Text", citation: { sourceType: "quran", language: "ar" } }],
   });
-
-  const llmProvider =
-    createGeminiLLMProvider();
-
-  const draftGenerator =
-    createDraftGenerator({
-      llmProvider,
-      model: "gemini-3.1-flash-lite",
-    });
-
-  const question =
-    "What is Tawhid in Islam?";
-
-  console.log("Question:");
-  console.log(question);
-
-  console.log("\nRetrieving evidence...\n");
-
-  const evidence =
-    await retriever.retrieve(question);
-
-  console.log("EVIDENCE:\n");
-  console.dir(evidence, { depth: null });
-
-  console.log("\nGenerating draft...\n");
-
-  const draft =
-    await draftGenerator.generateDraft({
-      question,
-      language: "en",
-      evidence,
-    });
-
-  console.log("DRAFT:\n");
-  console.dir(draft, { depth: null });
-
-  console.log("\nASSERTIONS:\n");
-
-  console.log(
-    "Evidence returned:",
-    evidence.length > 0 ? "✅" : "❌"
-  );
-
-  console.log(
-    "Gemini draft returned:",
-    draft?.answer ? "✅" : "❌"
-  );
-
-  console.log(
-    "Language:",
-    draft?.language === "en" ? "✅" : "❌"
-  );
-
-  console.log(
-    "Citations returned:",
-    Array.isArray(draft?.citations) &&
-      draft.citations.length > 0
-      ? "✅"
-      : "❌"
-  );
-
-  await closeMongo();
-}
-
-main().catch(async (error) => {
-  console.error("\nTEST FAILED:\n");
-  console.error(error);
-
-  await closeMongo();
-
-  process.exit(1);
+  assert.equal(draft.answer, "An answer.");
 });

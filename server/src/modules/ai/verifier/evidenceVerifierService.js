@@ -6,10 +6,6 @@ const {
   parseVerificationResponse,
 } = require("./verificationResponseParser");
 
-const {
-  determineVerificationStatus,
-} = require("./verificationRules");
-
 /**
  * Creates the complete semantic evidence verifier.
  *
@@ -22,7 +18,8 @@ const {
  * @returns {Object}
  */
 function createEvidenceVerifierService(
-  semanticVerificationProvider
+  semanticVerificationProvider,
+  { onClaimAudit } = {}
 ) {
   if (
     !semanticVerificationProvider ||
@@ -59,19 +56,15 @@ function createEvidenceVerifierService(
         evidence,
       });
 
-    const parsed =
-      parseVerificationResponse(response);
+    const parsed = parseVerificationResponse(response, {
+      question,
+      draft: draft.answer,
+      evidence,
+    });
 
-    const status =
-      determineVerificationStatus({
-        citationValid: true,
-        evidenceSupported:
-          parsed.evidenceSupported,
-        unsupportedClaims:
-          parsed.unsupportedClaims,
-        warnings: parsed.warnings,
-        riskFlags: parsed.riskFlags,
-      });
+    if (typeof onClaimAudit === "function") {
+      onClaimAudit(parsed.claimAudits);
+    }
 
     return createEvidenceVerification({
       evidenceSupported:

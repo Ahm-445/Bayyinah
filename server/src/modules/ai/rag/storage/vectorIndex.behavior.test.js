@@ -11,6 +11,7 @@ const expectedFields = [
   { type: "filter", path: "metadata.approved" },
   { type: "filter", path: "metadata.category" },
   { type: "filter", path: "metadata.language" },
+  { type: "filter", path: "metadata.languages" },
 ];
 
 function createDb(existingIndexes = []) {
