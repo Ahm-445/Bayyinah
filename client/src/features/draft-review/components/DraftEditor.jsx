@@ -1,6 +1,5 @@
 import { userMessage } from '../../../services/errors.js'
 import AiNotice from '../../../shared/components/AiNotice.jsx'
-import CitedText from '../../../shared/components/CitedText.jsx'
 import SourcesInAnswer from './SourcesInAnswer.jsx'
 
 export default function DraftEditor({
@@ -69,13 +68,13 @@ export default function DraftEditor({
           <SourcesInAnswer text={value} evidence={draft.evidence} />
         </>
       ) : (
-        <CitedText
-          text={draft.text}
-          citations={draft.evidence}
-          showUnknown
+        <div
+          dir="auto"
           lang={draft.question.language}
-          className="rounded-lg border border-stone-200 bg-stone-50 p-4 leading-relaxed text-stone-800"
-        />
+          className="rounded-lg border border-stone-200 bg-stone-50 p-4 leading-relaxed whitespace-pre-wrap text-stone-800"
+        >
+          {draft.text}
+        </div>
       )}
     </section>
   )

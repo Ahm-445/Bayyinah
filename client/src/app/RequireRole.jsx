@@ -1,7 +1,8 @@
 import { Navigate, useLocation } from 'react-router'
 import { getAuth } from '../services/session.js'
+import { homeFor } from '../shared/lib/roles.js'
 
-/** Sends signed-out users to /login, and wrong-role users away. */
+/** Signed-out users go to /login; signed-in users with another role go to their own dashboard. */
 export default function RequireRole({ roles, children }) {
   const location = useLocation()
   const auth = getAuth()
@@ -10,7 +11,7 @@ export default function RequireRole({ roles, children }) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
   if (!roles.includes(auth.user?.role)) {
-    return <Navigate to="/ask" replace />
+    return <Navigate to={homeFor(auth.user?.role)} replace />
   }
   return children
 }

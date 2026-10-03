@@ -1,10 +1,10 @@
 import { config } from './config.js'
 import { ApiError } from './errors.js'
-import { clearAuth, getAuth, getSessionId } from './session.js'
+import { clearAuth, getAuth } from './session.js'
 
 /** Real backend transport. */
 export async function httpRequest(method, path, { body } = {}) {
-  const headers = { Accept: 'application/json', 'X-Session-Id': getSessionId() }
+  const headers = { Accept: 'application/json' }
   const auth = getAuth()
   if (auth?.token) headers.Authorization = `Bearer ${auth.token}`
   if (body !== undefined) headers['Content-Type'] = 'application/json'

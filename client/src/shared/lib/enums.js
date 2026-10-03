@@ -9,6 +9,16 @@ export const QUESTION_STATUS = Object.freeze({
   FAILED: 'failed',
 })
 
+/** Question status as the questioner sees it. */
+export const QUESTION_STATUS_LABEL = Object.freeze({
+  submitted: { label: 'Being prepared', tone: 'neutral' },
+  drafting: { label: 'Being prepared', tone: 'neutral' },
+  awaiting_review: { label: 'In review', tone: 'warning' },
+  answered: { label: 'Answered', tone: 'success' },
+  referred: { label: 'Referred to a scholar', tone: 'neutral' },
+  failed: { label: 'Could not be processed', tone: 'danger' },
+})
+
 export const DRAFT_STATUS = Object.freeze({
   IN_REVIEW: 'in_review',
   APPROVED: 'approved',

@@ -22,17 +22,21 @@ export default function AnswerList({ questionId }) {
           return <StateNotice title="No answers yet">Please check back soon.</StateNotice>
         }
         const chosen = answers.find((a) => a.id === selectedAnswerId)
-        const columns = answers.length >= 3 ? 'md:grid-cols-2 xl:grid-cols-3' : 'md:grid-cols-2'
+        const single = answers.length === 1
+        // The sidebar narrows the main area, so cards go side by side only on wide screens.
+        const columns = single ? 'max-w-3xl' : 'xl:grid-cols-2'
 
         return (
           <section className="space-y-4">
             <div>
               <h2 className="text-xl font-semibold">
-                {answers.length === 1 ? 'Your answer' : `Compare ${answers.length} answers`}
+                {single ? 'Your answer' : `Compare ${answers.length} answers`}
               </h2>
               {!chosen && (
                 <p className="mt-1 text-stone-600">
-                  Read each answer and select the one that helped you most. You can choose only one.
+                  {single
+                    ? 'Read the answer, and select it if it helped you.'
+                    : 'Read each answer and select the one that helped you most. You can choose only one.'}
                 </p>
               )}
             </div>
@@ -55,6 +59,7 @@ export default function AnswerList({ questionId }) {
                   key={answer.id}
                   answer={answer}
                   index={index}
+                  showNumber={!single}
                   selected={answer.id === selectedAnswerId}
                   canSelect={!selectedAnswerId}
                   onSelect={setPending}
@@ -70,8 +75,10 @@ export default function AnswerList({ questionId }) {
               onConfirm={confirm}
               onCancel={() => setPending(null)}
             >
-              You are choosing the answer by {pending?.daee.displayName}. You can only choose one
-              answer for this question, and you cannot change it later.
+              You are choosing the answer by {pending?.daee.displayName}.{' '}
+              {single
+                ? 'You cannot change this later.'
+                : 'You can only choose one answer for this question, and you cannot change it later.'}
             </ConfirmDialog>
           </section>
         )

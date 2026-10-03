@@ -1,23 +1,15 @@
-import { useQueryClient } from '@tanstack/react-query'
-import { NavLink, Outlet, useNavigate } from 'react-router'
-import { logout } from '../../services/api/auth.js'
+import { NavLink, Outlet } from 'react-router'
 import { getAuth } from '../../services/session.js'
 import { ROLE } from '../../shared/lib/enums.js'
+import { useLogout } from '../useLogout.js'
 import AppHeader from './AppHeader.jsx'
 
 const navClass = ({ isActive }) =>
   isActive ? 'font-medium text-stone-950' : 'text-stone-600 hover:text-stone-950'
 
 export default function DaeeLayout() {
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
+  const handleLogout = useLogout()
   const user = getAuth()?.user
-
-  function handleLogout() {
-    logout()
-    queryClient.clear()
-    navigate('/login', { replace: true })
-  }
 
   return (
     <div className="min-h-screen">

@@ -1,11 +1,13 @@
+import { useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
+import { MY_QUESTIONS_KEY } from '../../question-history/hooks/useMyQuestions.js'
 import QueryState from '../../../shared/components/QueryState.jsx'
 import StateNotice from '../../../shared/components/StateNotice.jsx'
 import { QUESTION_STATUS } from '../../../shared/lib/enums.js'
 import { fullDate, timeAgo } from '../../../shared/lib/format.js'
 import AnswerList from '../components/AnswerList.jsx'
 import ProgressSteps from '../components/ProgressSteps.jsx'
-import SaveLinkNotice from '../components/SaveLinkNotice.jsx'
 import { useQuestion } from '../hooks/useQuestion.js'
 
 const askAgain = (
@@ -25,7 +27,7 @@ export default function QuestionPage() {
         query={query}
         notFound={
           <StateNotice title="Question not found">
-            Questions can only be opened in the browser they were asked from. Check the link, or{' '}
+            It may not exist, or it belongs to another account. Pick one of your questions, or{' '}
             {askAgain}.
           </StateNotice>
         }
@@ -41,6 +43,12 @@ export default function QuestionPage() {
 function QuestionView({ question, justSubmitted }) {
   const { status } = question
   const inProgress = question.isProcessing || status === QUESTION_STATUS.AWAITING_REVIEW
+  const queryClient = useQueryClient()
+
+  // Keep the sidebar's status chip in step with this page.
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: MY_QUESTIONS_KEY })
+  }, [status, queryClient])
 
   return (
     <>
@@ -53,7 +61,11 @@ function QuestionView({ question, justSubmitted }) {
         </h1>
       </header>
 
-      {status !== QUESTION_STATUS.FAILED && <SaveLinkNotice justSubmitted={justSubmitted} />}
+      {justSubmitted && (
+        <StateNotice title="Your question was sent" tone="success">
+          It is saved in your account under “Your questions”. This page updates automatically.
+        </StateNotice>
+      )}
 
       {inProgress && (
         <section className="rounded-lg border border-stone-200 bg-white p-5">
@@ -80,7 +92,7 @@ function QuestionView({ question, justSubmitted }) {
         </StateNotice>
       )}
 
-      {status === QUESTION_STATUS.ANSWERED && <AnswerList questionId={question.id} />}
+      {status === QUESTION_STATUS.ANSWERED && <AnswerList key={question.id} questionId={question.id} />}
     </>
   )
 }

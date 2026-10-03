@@ -1,10 +1,10 @@
 import EvidenceCard from '../../../shared/components/EvidenceCard.jsx'
 
 /**
- * `citedIds`: chunk ids cited in the current text (live).
+ * `isCited(item)`: whether the current text mentions this evidence (live).
  * `onInsert`: when set, each card offers "Insert citation".
  */
-export default function EvidencePanel({ evidence, citedIds = new Set(), onInsert }) {
+export default function EvidencePanel({ evidence, isCited = () => false, onInsert }) {
   return (
     <section>
       <h2 className="font-semibold">
@@ -16,7 +16,7 @@ export default function EvidencePanel({ evidence, citedIds = new Set(), onInsert
             <EvidenceCard
               key={item.key}
               evidence={item}
-              cited={citedIds.has(item.chunkId)}
+              cited={isCited(item)}
               action={
                 onInsert && (
                   <button

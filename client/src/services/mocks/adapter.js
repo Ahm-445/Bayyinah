@@ -1,19 +1,22 @@
-import { markerIds } from '../../shared/lib/citations.js'
 import { config } from '../config.js'
 import { ApiError } from '../errors.js'
-import { clearAuth, getAuth, getSessionId } from '../session.js'
+import { clearAuth, getAuth } from '../session.js'
 import { EVIDENCE, citationsFor } from './fixtures/evidence.js'
 import { ANSWERS, DRAFTS, QUESTIONS } from './fixtures/scenarios.js'
 import { SOURCES } from './fixtures/sources.js'
 import { USERS } from './fixtures/users.js'
 
-// Mock of the REST API in docs/api.md, part 2.
+// Mock of the REST API in docs/api.md, part 2, updated for the team decision
+// of 2026-10-03: questioners and dāʿīs have accounts (username + password),
+// questions are owned by the questioner's account (non-owners get 404), and
+// only the owner can select an answer. Register, login and GET /questions
+// are pending backend confirmation.
 // State is persisted to localStorage so it survives reloads and is shared
 // between tabs (questioner tab + dāʿī tab). resetMockData() restores the seed.
-// Error codes used here are only the ones api.md defines
-// (already_selected, blocked, warnings_not_acknowledged); other errors have no code.
+// Error codes: already_selected, blocked, warnings_not_acknowledged (api.md),
+// username_taken (pending); other errors have no code.
 
-const STORAGE_KEY = 'bayyinah.mockDb.v2'
+const STORAGE_KEY = 'bayyinah.mockDb.v3'
 
 function seed() {
   return {
@@ -21,7 +24,6 @@ function seed() {
     drafts: structuredClone(DRAFTS),
     answers: structuredClone(ANSWERS),
     users: structuredClone(USERS),
-    selections: {}, // `${sessionId}:${questionId}` → answerId
     nextId: 100,
   }
 }
@@ -102,7 +104,7 @@ function advanceQuestion(q) {
   const evidence = personal ? [] : [EVIDENCE.dhariyat56]
   const generatedText = personal
     ? null
-    : `[Mock draft] This is a placeholder AI draft for: "${q.text}". The Qur'an states that God created humans and jinn to worship Him [[quran-hafs-51-56]].`
+    : `[Mock draft] This is a placeholder AI draft for: "${q.text}". The Qur'an states that God created humans and jinn to worship Him (Adh-Dhariyat 51:56).`
 
   for (const daee of daees) {
     db.drafts.push({
@@ -144,19 +146,36 @@ function advanceQuestion(q) {
 // ---------------------------------------------------------------------------
 // Lookups and guards
 
-function findQuestion(id, sessionId) {
-  const q = db.questions.find((item) => item.id === id)
-  // The real backend only serves a question to its owner session.
-  if (!q || (q._sessionId && q._sessionId !== sessionId)) fail(404, 'Question not found.')
-  advanceQuestion(q)
-  return q
-}
-
 function requireUser(ctx, roles = ['daee', 'admin']) {
   if (!ctx.user) fail(401, 'Please sign in.')
   if (!roles.includes(ctx.user.role)) fail(403, 'You do not have access to this page.')
   return ctx.user
 }
+
+/** A question owned by the signed-in questioner; anyone else gets 404. */
+function findOwnQuestion(ctx, id) {
+  const user = requireUser(ctx, ['questioner'])
+  const q = db.questions.find((item) => item.id === id)
+  if (!q || q._ownerId !== user.id) fail(404, 'Question not found.')
+  advanceQuestion(q)
+  return q
+}
+
+function questionView(q) {
+  return {
+    id: q.id,
+    text: q.text,
+    language: q.language,
+    status: q.status,
+    classification: q.classification
+      ? { category: q.classification.category, level: q.classification.level }
+      : null,
+    createdAt: q.createdAt,
+  }
+}
+
+const USERNAME = /^[A-Za-z0-9_.-]{3,32}$/
+const MIN_PASSWORD = 8
 
 function findOwnDraft(ctx, id) {
   const user = requireUser(ctx)
@@ -167,7 +186,8 @@ function findOwnDraft(ctx, id) {
 
 const isClosed = (draft) => draft.status === 'approved' || draft.status === 'rejected'
 
-const publicUser = (u) => ({ id: u.id, displayName: u.displayName, role: u.role })
+const publicUser = (u) => ({ id: u.id, username: u.username, displayName: u.displayName, role: u.role })
+const session = (u) => ({ token: `mock-token:${u.id}`, user: publicUser(u) })
 
 // ---------------------------------------------------------------------------
 // Routes (paths relative to /api)
@@ -175,16 +195,46 @@ const publicUser = (u) => ({ id: u.id, displayName: u.displayName, role: u.role 
 const routes = [
   ['GET', '/health', () => ({ status: 'ok', db: 'connected', uptime: 1 })],
 
-  // Auth
+  // Auth (pending backend confirmation). Usernames are case-insensitive.
   ['POST', '/auth/login', ({ body }) => {
-    const user = db.users.find((u) => u.email === body?.email?.trim().toLowerCase())
-    if (!user || user.password !== body?.password) fail(401, 'Invalid email or password.')
-    return { token: `mock-token:${user.id}`, user: publicUser(user) }
+    const username = String(body?.username ?? '').trim().toLowerCase()
+    const user = db.users.find((u) => u.username.toLowerCase() === username)
+    if (!user || user.password !== body?.password) fail(401, 'Invalid username or password.')
+    return session(user)
+  }],
+  // Questioners only; dāʿī and admin accounts are seeded.
+  ['POST', '/auth/register', ({ body }) => {
+    const username = String(body?.username ?? '').trim()
+    const password = body?.password
+    if (!USERNAME.test(username)) {
+      fail(400, 'Username must be 3–32 characters: letters, numbers, dot, dash or underscore.')
+    }
+    if (typeof password !== 'string' || password.length < MIN_PASSWORD) {
+      fail(400, `Password must be at least ${MIN_PASSWORD} characters.`)
+    }
+    if (db.users.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
+      fail(409, 'That username is already taken.', 'username_taken')
+    }
+    const user = { id: newId('usr'), username, password, displayName: username, role: 'questioner', score: 0 }
+    db.users.push(user)
+    return [201, session(user)]
   }],
   ['GET', '/auth/me', (ctx) => publicUser(requireUser(ctx, ['questioner', 'daee', 'admin']))],
 
-  // Questioner
-  ['POST', '/questions', ({ body, sessionId }) => {
+  // Questioner (own questions only)
+  ['GET', '/questions', (ctx) => {
+    const user = requireUser(ctx, ['questioner'])
+    const mine = db.questions.filter((q) => q._ownerId === user.id)
+    mine.forEach(advanceQuestion)
+    return {
+      questions: mine
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .map(questionView),
+    }
+  }],
+  ['POST', '/questions', (ctx) => {
+    const user = requireUser(ctx, ['questioner'])
+    const { body } = ctx
     const text = typeof body?.text === 'string' ? body.text.trim() : ''
     if (text.length < 1 || text.length > 2000) {
       fail(400, 'Question must be between 1 and 2000 characters.')
@@ -196,38 +246,27 @@ const routes = [
       status: 'submitted',
       classification: null,
       createdAt: now(),
-      _sessionId: sessionId,
+      _ownerId: user.id,
       _submittedAtMs: Date.now(),
     }
     db.questions.push(q)
     return [201, { id: q.id, status: q.status }]
   }],
-  ['GET', '/questions/:id', ({ params, sessionId }) => {
-    const q = findQuestion(params.id, sessionId)
+  ['GET', '/questions/:id', (ctx) => questionView(findOwnQuestion(ctx, ctx.params.id))],
+  ['GET', '/questions/:id/answers', (ctx) => {
+    const q = findOwnQuestion(ctx, ctx.params.id)
     return {
-      id: q.id,
-      text: q.text,
-      language: q.language,
-      status: q.status,
-      classification: q.classification
-        ? { category: q.classification.category, level: q.classification.level }
-        : null,
-      createdAt: q.createdAt,
-    }
-  }],
-  ['GET', '/questions/:id/answers', ({ params, sessionId }) => {
-    const q = findQuestion(params.id, sessionId)
-    return {
-      selectedAnswerId: db.selections[`${sessionId}:${q.id}`] ?? null,
+      selectedAnswerId: q._selectedAnswerId ?? null,
       answers: db.answers.filter((a) => a._questionId === q.id).map(publicView),
     }
   }],
-  ['POST', '/answers/:id/select', ({ params, sessionId }) => {
-    const answer = db.answers.find((a) => a.id === params.id)
+  // Only the questioner who asked can select, once per question.
+  ['POST', '/answers/:id/select', (ctx) => {
+    const answer = db.answers.find((a) => a.id === ctx.params.id)
     if (!answer) fail(404, 'Answer not found.')
-    const key = `${sessionId}:${answer._questionId}`
-    if (db.selections[key]) fail(409, 'You already selected an answer for this question.', 'already_selected')
-    db.selections[key] = answer.id
+    const q = findOwnQuestion(ctx, answer._questionId)
+    if (q._selectedAnswerId) fail(409, 'You already selected an answer for this question.', 'already_selected')
+    q._selectedAnswerId = answer.id
     return [201, { selected: true }]
   }],
 
@@ -265,7 +304,8 @@ const routes = [
     const text = ctx.body?.text
     if (typeof text !== 'string' || !text.trim()) fail(400, 'Draft text cannot be empty.')
     draft.text = text
-    draft.versions.push({ text, editedAt: now() })
+    // Edits are saved under the dāʿī's account.
+    draft.versions.push({ text, editedAt: now(), editedBy: ctx.user.id })
     return publicView(draft)
   }],
   ['POST', '/drafts/:id/approve', (ctx) => {
@@ -276,22 +316,14 @@ const routes = [
       fail(422, 'Please acknowledge the verification warnings before approving.', 'warnings_not_acknowledged')
     }
     const user = db.users.find((u) => u.id === draft._daeeId) ?? ctx.user
-    // Sources follow the text (pending backend agreement): the published
-    // citations are rebuilt from the [[chunkId]] markers left in the final
-    // text, matched against the draft's evidence. The AI draft's original
-    // citation list is not carried over.
-    const evidenceById = new Map(draft.evidence.map((e) => [e.chunkId, e]))
-    const cited = markerIds(draft.text)
-      .filter((id) => evidenceById.has(id))
-      .map((id) => evidenceById.get(id))
+    // The questioner never sees citations; the dāʿī cites sources in the text.
     const answer = {
       id: newId('ans'),
       daee: { id: user.id, displayName: user.displayName },
       finalText: draft.text,
-      citations: citationsFor(cited),
+      citations: draft.citations,
       verificationStatus: draft.verification?.status ?? 'NEEDS_REVIEW',
-      // AI-assisted only while at least one AI-retrieved source is still cited.
-      aiAssisted: cited.length > 0,
+      aiAssisted: true,
       publishedAt: now(),
       _questionId: draft.question.id,
       _draftId: draft.id,
@@ -353,7 +385,6 @@ export async function mockRequest(method, path, { body } = {}) {
       const ctx = {
         params,
         body: body === undefined ? undefined : structuredClone(body),
-        sessionId: getSessionId(),
         user: currentUser(),
       }
       let result = route.handler(ctx)

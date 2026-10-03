@@ -31,9 +31,12 @@ function Findings({ title, items, tone }) {
 export default function VerificationPanel({ verification }) {
   return (
     <section className="rounded-lg border border-stone-200 bg-white p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-2">
         <h2 className="font-semibold">Verification</h2>
-        <VerificationBadge status={verification?.status} />
+        <div className="flex flex-col items-end gap-1">
+          <VerificationBadge status={verification?.status} />
+          <span className="text-xs text-stone-500">Applies to the original AI draft</span>
+        </div>
       </div>
 
       {verification ? (
