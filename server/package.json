@@ -16,7 +16,8 @@
     "validate:knowledge-sources:remaining": "RUN_LIVE_KNOWLEDGE_E2E=1 KNOWLEDGE_E2E_CASE=multi_source_ar,multi_source_en,unrelated_python,personal_ruling_ar node tests/knowledgeSourcesE2E.validation.js",
     "validate:knowledge-sources:arabic-explanations": "RUN_LIVE_KNOWLEDGE_E2E=1 KNOWLEDGE_E2E_CASE=tafsir_ar,multi_source_ar node tests/knowledgeSourcesE2E.validation.js",
     "ingest:hadith:dry-run": "node src/modules/ai/rag/ingestion/hadith/hadithFullIngestion.js --dry-run",
-    "test:hadith-workflow": "RUN_LIVE_HADITH_TESTS=1 node --test tests/hadithWorkflow.test.js"
+    "test:hadith-workflow": "RUN_LIVE_HADITH_TESTS=1 node --test tests/hadithWorkflow.test.js",
+    "test:backend": "node --test tests/backendApi.test.js"
   },
   "keywords": [],
   "author": "",
@@ -27,7 +28,9 @@
     "dotenv": "^18.0.5",
     "express": "^5.2.1",
     "mongoose": "^9.10.3",
-    "openai": "^7.27.0"
+    "openai": "^7.27.0",
+    "mongodb": "^7.6.0",
+    "@google/genai": "^2.26.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
