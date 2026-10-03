@@ -13,7 +13,7 @@ const questionSchema = new mongoose.Schema({
   language: { type: String, enum: ["ar", "en"], default: undefined },
   status: {
     type: String,
-    enum: ["submitted", "processing", "awaiting_review", "referred", "failed"],
+    enum: ["submitted", "processing", "awaiting_review", "answered", "referred", "failed"],
     default: "submitted",
   },
 }, { timestamps: { createdAt: true, updatedAt: false } });

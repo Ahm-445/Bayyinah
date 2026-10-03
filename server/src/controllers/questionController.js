@@ -30,7 +30,14 @@ function projectAIResult(result) {
   };
 }
 
-function createQuestionController({ QuestionModel, aiService }) {
+function isReviewableAIResult(result) {
+  return result?.action === "ANSWER" &&
+    result.safety?.decision !== "BLOCK" &&
+    typeof result.draft?.answer === "string" &&
+    ["PASS", "NEEDS_REVIEW"].includes(result.verification?.status);
+}
+
+function createQuestionController({ QuestionModel, DraftModel, aiService }) {
   async function answerQuestion(req, res, next) {
     try {
       const { questionId } = req.params;
@@ -81,6 +88,7 @@ function createQuestionController({ QuestionModel, aiService }) {
       }
 
       let result;
+      let draftRecord = null;
       try {
         result = await aiService.answerQuestion({
           questionId: question.questionId,
@@ -89,20 +97,35 @@ function createQuestionController({ QuestionModel, aiService }) {
             ? { language: body.language || question.language }
             : {}),
         });
+
+        if (isReviewableAIResult(result)) {
+          draftRecord = await DraftModel.create({
+            questionId: question.questionId,
+            questionText: question.text,
+            action: result.action,
+            classification: result.classification,
+            safety: result.safety,
+            evidence: result.evidence,
+            draft: result.draft,
+            verification: result.verification,
+            status: "pending_review",
+          });
+        }
+
+        question.status = result.action === "REFER" ? "referred" : "awaiting_review";
+        await question.save();
       } catch (error) {
         question.status = "failed";
         await question.save();
         throw error;
       }
 
-      question.status = result.action === "REFER" ? "referred" : "awaiting_review";
-      await question.save();
-
       res.status(200).json({
         questionId: question.questionId,
         status: question.status,
         ...projectAIResult(result),
-        draftStatus: result.draft ? "pending_review" : null,
+        ...(draftRecord ? { draftId: String(draftRecord._id) } : {}),
+        draftStatus: draftRecord ? "pending_review" : null,
         published: false,
       });
     } catch (error) {
@@ -113,4 +136,4 @@ function createQuestionController({ QuestionModel, aiService }) {
   return { answerQuestion };
 }
 
-module.exports = { createQuestionController, projectAIResult };
+module.exports = { createQuestionController, projectAIResult, isReviewableAIResult };
