@@ -19,6 +19,15 @@ const quranQuestion = classifyQuestion("ما معنى هذه الآية من ا�
 assert.strictEqual(quranQuestion.category, "tafsir");
 assert.strictEqual(quranQuestion.language, "ar");
 
+const arabicGeneralIslamQuestion = classifyQuestion("ما هو الإسلام؟");
+const englishGeneralIslamQuestion = classifyQuestion("What is Islam?");
+for (const classification of [arabicGeneralIslamQuestion, englishGeneralIslamQuestion]) {
+  assert.strictEqual(classification.category, "general_islam");
+  assert.strictEqual(classification.level, "A");
+  assert.strictEqual(classification.risk, "low");
+  assert.strictEqual(classification.action, "ANSWER");
+}
+
 const languageAndIntentCases = [
   ["ماذا يقول القرآن عن الصبر وقت الشدائد؟", "ar", "quran"],
   ["What does the Quran say about patience during difficult times?", "en", "quran"],

@@ -232,6 +232,7 @@ const CLASSIFIER_RULES = Object.freeze({
     [QUESTION_CATEGORIES.GENERAL_ISLAM]: Object.freeze([
   "about islam",
   "what is islam",
+  "ما هو الاسلام",
   "why do muslims",
   "why does islam",
   "islam teaches",
