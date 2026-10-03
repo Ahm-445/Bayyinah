@@ -1,12 +1,13 @@
+import { useI18n } from '../../../i18n/core.js'
 import StateNotice from '../../../shared/components/StateNotice.jsx'
-import { AI_ISSUE, AI_ISSUE_LABEL } from '../../../shared/lib/enums.js'
+import { AI_ISSUE } from '../../../shared/lib/enums.js'
 
 function Problems({ title, items }) {
   if (!items.length) return null
   return (
     <div className="mt-2">
       <p className="font-medium">{title}</p>
-      <ul className="mt-1 list-disc space-y-0.5 pl-5">
+      <ul className="mt-1 list-disc space-y-0.5 ps-5">
         {items.map((item) => (
           <li key={item} dir="auto">
             {item}
@@ -17,42 +18,40 @@ function Problems({ title, items }) {
   )
 }
 
-/** Advisory banner above the editor when the AI could not give a usable draft. */
+/**
+ * Advisory banner above the editor when the AI could not give a usable draft.
+ * Wording: "Verification failed" = a draft exists and failed verification;
+ * "Insufficient evidence" = too little evidence, no draft.
+ */
 export default function AiIssueNotice({ draft }) {
+  const { t } = useI18n()
   const { aiIssue, verification } = draft
   if (!aiIssue) return null
-  const title = AI_ISSUE_LABEL[aiIssue]
 
   if (aiIssue === AI_ISSUE.VERIFICATION_FAILED) {
     return (
-      <StateNotice title={`${title}: check the draft before publishing`} tone="danger">
-        <p>
-          The AI draft below did not pass verification. You can edit and publish it, but fix or
-          remove these problems first.
-        </p>
-        <Problems title="Claims the evidence does not support" items={verification.unsupportedClaims} />
-        <Problems title="Citations not in the retrieved evidence" items={verification.missingCitations} />
-        <Problems title="Risk flags" items={verification.riskFlags} />
-        <Problems title="Warnings" items={verification.warnings} />
+      <StateNotice title={t('review.issue.failedTitle')} tone="danger">
+        <p>{t('review.issue.failedBody')}</p>
+        <Problems title={t('review.issue.unsupported')} items={verification.unsupportedClaims} />
+        <Problems title={t('review.issue.missing')} items={verification.missingCitations} />
+        <Problems title={t('review.issue.riskFlags')} items={verification.riskFlags} />
+        <Problems title={t('review.issue.warnings')} items={verification.warnings} />
       </StateNotice>
     )
   }
 
   if (aiIssue === AI_ISSUE.CLARIFY) {
     return (
-      <StateNotice title={`${title}: no AI draft`} tone="warning">
-        The AI judged this question too unclear to answer, so it did not draft one. You can write an
-        answer yourself, or reject the question.
+      <StateNotice title={t('review.issue.clarifyTitle')} tone="warning">
+        {t('review.issue.clarifyBody')}
       </StateNotice>
     )
   }
 
   return (
-    <StateNotice title={`${title}: write the answer yourself`} tone="warning">
-      The approved sources did not contain enough evidence for the AI to draft an answer.
-      {draft.evidence.length > 0
-        ? ' The evidence it did find is listed on the right.'
-        : ' No evidence was found.'}
+    <StateNotice title={t('review.issue.insufficientTitle')} tone="warning">
+      {t('review.issue.insufficientBody')}{' '}
+      {draft.evidence.length > 0 ? t('review.issue.evidenceFound') : t('review.issue.noEvidence')}
     </StateNotice>
   )
 }

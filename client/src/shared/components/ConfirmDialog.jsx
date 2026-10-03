@@ -1,18 +1,20 @@
 import { useEffect, useRef } from 'react'
+import { useI18n } from '../../i18n/core.js'
 
 /** Modal confirm built on <dialog> (focus trap, Esc to cancel). */
 export default function ConfirmDialog({
   open,
   title,
   children,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   busy = false,
   danger = false,
   onConfirm,
   onCancel,
 }) {
   const ref = useRef(null)
+  const { t } = useI18n()
 
   useEffect(() => {
     const dialog = ref.current
@@ -42,7 +44,7 @@ export default function ConfirmDialog({
             disabled={busy}
             className="rounded px-3 py-2 text-sm text-stone-700 hover:bg-stone-100 disabled:opacity-50"
           >
-            {cancelLabel}
+            {cancelLabel ?? t('common.cancel')}
           </button>
           <button
             type="button"
@@ -53,7 +55,7 @@ export default function ConfirmDialog({
               danger ? 'bg-red-700 hover:bg-red-800' : 'bg-emerald-700 hover:bg-emerald-800'
             }`}
           >
-            {confirmLabel}
+            {confirmLabel ?? t('common.confirm')}
           </button>
         </div>
       </div>

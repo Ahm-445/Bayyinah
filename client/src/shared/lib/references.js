@@ -35,13 +35,34 @@ function verseOf(evidence) {
   return { surah, ayah, tafsir: evidence.sourceType === 'tafsir' }
 }
 
-/** Readable reference to insert into the answer, e.g. "(Adh-Dhariyat 51:56)". */
-export function readableReference(evidence) {
+// Arabic surah names, index = surah number - 1.
+export const SURAH_NAMES_AR = [
+  'الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف', 'الأنفال', 'التوبة',
+  'يونس', 'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء', 'الكهف', 'مريم', 'طه',
+  'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان', 'الشعراء', 'النمل', 'القصص', 'العنكبوت',
+  'الروم', 'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر', 'يس', 'الصافات', 'ص', 'الزمر', 'غافر',
+  'فصلت', 'الشورى', 'الزخرف', 'الدخان', 'الجاثية', 'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق',
+  'الذاريات', 'الطور', 'النجم', 'القمر', 'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر',
+  'الممتحنة', 'الصف', 'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم', 'الملك', 'القلم',
+  'الحاقة', 'المعارج', 'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات',
+  'النبأ', 'النازعات', 'عبس', 'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج', 'الطارق',
+  'الأعلى', 'الغاشية', 'الفجر', 'البلد', 'الشمس', 'الليل', 'الضحى', 'الشرح', 'التين', 'العلق',
+  'القدر', 'البينة', 'الزلزلة', 'العاديات', 'القارعة', 'التكاثر', 'العصر', 'الهمزة', 'الفيل',
+  'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر', 'المسد', 'الإخلاص', 'الفلق', 'الناس',
+]
+
+/**
+ * Readable reference to insert into the answer, in the QUESTION's language
+ * (not the UI language): "(Adh-Dhariyat 51:56)" or "(الذاريات 51:56)".
+ */
+export function readableReference(evidence, language = 'en') {
   const verse = verseOf(evidence)
   if (!verse) return `(${evidence.reference ?? evidence.sourceTitle ?? evidence.chunkId})`
-  const name = SURAH_NAMES[verse.surah - 1] ?? `Surah ${verse.surah}`
+  const arabic = language === 'ar'
+  const name = (arabic ? SURAH_NAMES_AR : SURAH_NAMES)[verse.surah - 1] ?? `${arabic ? 'سورة' : 'Surah'} ${verse.surah}`
   const ref = `${name} ${verse.surah}:${verse.ayah}`
-  return verse.tafsir ? `(Tafsir on ${ref})` : `(${ref})`
+  if (!verse.tafsir) return `(${ref})`
+  return arabic ? `(تفسير ${ref})` : `(Tafsir on ${ref})`
 }
 
 /**

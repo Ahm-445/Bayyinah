@@ -9,14 +9,14 @@ export const QUESTION_STATUS = Object.freeze({
   FAILED: 'failed',
 })
 
-/** Question status as the questioner sees it. */
-export const QUESTION_STATUS_LABEL = Object.freeze({
-  submitted: { label: 'Being prepared', tone: 'neutral' },
-  drafting: { label: 'Being prepared', tone: 'neutral' },
-  awaiting_review: { label: 'In review', tone: 'warning' },
-  answered: { label: 'Answered', tone: 'success' },
-  referred: { label: 'Referred to a scholar', tone: 'neutral' },
-  failed: { label: 'Could not be processed', tone: 'danger' },
+/** Tone of the questioner-facing status chip (text: i18n questionStatus.<status>). */
+export const QUESTION_STATUS_TONE = Object.freeze({
+  submitted: 'neutral',
+  drafting: 'neutral',
+  awaiting_review: 'warning',
+  answered: 'success',
+  referred: 'neutral',
+  failed: 'danger',
 })
 
 export const DRAFT_STATUS = Object.freeze({
@@ -45,19 +45,15 @@ export const ROLE = Object.freeze({
   ADMIN: 'admin',
 })
 
-/** Badge text for verification.status (docs/api.md 2.2). */
-export const VERIFICATION_BADGE = Object.freeze({
-  PASS: { label: 'Verified', tone: 'success' },
-  NEEDS_REVIEW: { label: 'Needs Review', tone: 'warning' },
-  FAIL: { label: 'Insufficient Evidence', tone: 'danger' },
-})
-
-/** Short descriptions of the A–D levels (ai/contracts/aiTypes.js). */
-export const LEVEL_LABEL = Object.freeze({
-  A: 'Established information',
-  B: 'Explanation and evidence',
-  C: 'Sensitive or differing views',
-  D: 'Personal ruling (referred)',
+/**
+ * Badge tone for verification.status (text: i18n verification.<status>).
+ * Wording: FAIL is "Verification failed" (a draft exists and failed);
+ * "Insufficient evidence" is reserved for AI_ISSUE.INSUFFICIENT (no draft).
+ */
+export const VERIFICATION_TONE = Object.freeze({
+  PASS: 'success',
+  NEEDS_REVIEW: 'warning',
+  FAIL: 'danger',
 })
 
 /**
@@ -71,20 +67,14 @@ export const DRAFT_VIEW = Object.freeze({
 })
 
 /**
- * Why the AI could not produce a usable draft. Advisory only: the AI never
- * blocks the dāʿī, but approving needs an explicit responsibility checkbox.
+ * Why the AI could not produce a usable draft (text: i18n aiIssue.<value>).
+ * Advisory only: the AI never blocks the dāʿī, but approving needs an
+ * explicit responsibility checkbox.
  */
 export const AI_ISSUE = Object.freeze({
-  INSUFFICIENT: 'insufficient', // ABSTAIN before generation: no draft
-  VERIFICATION_FAILED: 'verification_failed', // draft exists, verification FAIL
-  CLARIFY: 'clarify', // question too unclear: no draft
-})
-
-/** Queue / review labels for each AI issue. */
-export const AI_ISSUE_LABEL = Object.freeze({
-  insufficient: "AI couldn't draft",
-  verification_failed: 'Verification failed',
-  clarify: 'Unclear question',
+  INSUFFICIENT: 'insufficient', // ABSTAIN before generation: no draft ("Insufficient evidence")
+  VERIFICATION_FAILED: 'verification_failed', // draft exists, verification FAIL ("Verification failed")
+  CLARIFY: 'clarify', // question too unclear: no draft ("Unclear question")
 })
 
 /**
@@ -92,3 +82,4 @@ export const AI_ISSUE_LABEL = Object.freeze({
  * warning. The team may remove this; set to false to hide it everywhere.
  */
 export const ALLOW_LEVEL_D_OVERRIDE = true
+

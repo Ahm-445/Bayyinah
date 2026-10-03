@@ -1,7 +1,10 @@
 @import 'tailwindcss';
 
 @theme {
-  --font-arabic: 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif;
+  /* Qur'an and other classical Arabic source text (EvidenceCard): class font-quran */
+  --font-quran: 'Amiri', 'Noto Naskh Arabic', 'Traditional Arabic', serif;
+  /* Arabic interface text: class font-arabic, and the whole UI when <html lang="ar"> */
+  --font-arabic: 'IBM Plex Sans Arabic', 'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
 }
 
 @layer base {
@@ -9,9 +12,21 @@
     @apply bg-stone-50 text-stone-900 antialiased;
   }
 
-  /* Any Arabic block inside the English UI gets the Arabic font. */
+  /* Arabic UI, and any Arabic content block inside the English UI. */
+  html[lang='ar'] body,
   [lang='ar'] {
     font-family: var(--font-arabic);
-    line-height: 2;
+  }
+
+  /* Latin content inside the Arabic UI keeps the default sans stack. */
+  html[lang='ar'] [lang='en'] {
+    font-family: var(--default-font-family);
+  }
+}
+
+@layer utilities {
+  /* Keep the Qur'an font even inside lang="ar" blocks. */
+  .font-quran {
+    font-family: var(--font-quran);
   }
 }

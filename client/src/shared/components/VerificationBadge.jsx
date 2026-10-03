@@ -1,4 +1,5 @@
-import { VERIFICATION_BADGE } from '../lib/enums.js'
+import { useI18n } from '../../i18n/core.js'
+import { VERIFICATION_TONE } from '../lib/enums.js'
 
 const TONE = {
   success: 'bg-emerald-100 text-emerald-800 ring-emerald-600/20',
@@ -7,14 +8,15 @@ const TONE = {
   neutral: 'bg-stone-100 text-stone-700 ring-stone-500/20',
 }
 
-/** PASS → Verified, NEEDS_REVIEW → Needs Review, FAIL → Insufficient Evidence. */
+/** PASS → Verified, NEEDS_REVIEW → Needs Review, FAIL → Verification failed. */
 export default function VerificationBadge({ status }) {
-  const badge = VERIFICATION_BADGE[status] ?? { label: 'Not verified', tone: 'neutral' }
+  const { t } = useI18n()
+  const tone = VERIFICATION_TONE[status] ?? 'neutral'
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${TONE[badge.tone]}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${TONE[tone]}`}
     >
-      {badge.label}
+      {VERIFICATION_TONE[status] ? t(`verification.${status}`) : t('verification.none')}
     </span>
   )
 }

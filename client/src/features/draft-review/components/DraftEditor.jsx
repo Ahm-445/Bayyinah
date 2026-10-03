@@ -1,3 +1,4 @@
+import { useI18n } from '../../../i18n/core.js'
 import { userMessage } from '../../../services/errors.js'
 import AiNotice from '../../../shared/components/AiNotice.jsx'
 import SourcesInAnswer from './SourcesInAnswer.jsx'
@@ -13,42 +14,47 @@ export default function DraftEditor({
   saving,
   saveError,
 }) {
+  const i18n = useI18n()
+  const { t, dir } = i18n
   const dirty = value !== draft.text
   const hasAiDraft = Boolean(draft.generatedText)
   const isOriginal = value === draft.generatedText
+  const heading = hasAiDraft ? t('review.draftAnswer') : t('review.yourAnswer')
   const versionLabel =
     draft.versions.length > 1
-      ? `Version ${draft.versions.length}`
+      ? t('review.version', { n: draft.versions.length })
       : hasAiDraft
-        ? 'Original AI draft'
-        : 'No AI draft: written by you'
+        ? t('review.originalAi')
+        : t('review.noAiDraft')
 
   return (
     <section className="space-y-3">
       {hasAiDraft && <AiNotice />}
-      <div className="flex items-baseline justify-between">
-        <h2 className="font-semibold">{hasAiDraft ? 'Draft answer' : 'Your answer'}</h2>
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="font-semibold">{heading}</h2>
         <span className="text-xs text-stone-500">
           {versionLabel}
-          {dirty && ' · unsaved changes'}
+          {dirty && t('review.unsaved')}
         </span>
       </div>
 
       {editable ? (
         <>
           <label htmlFor="draft-text" className="sr-only">
-            {hasAiDraft ? 'Draft answer' : 'Your answer'}
+            {heading}
           </label>
+          {/* Answer text follows the question's language, not the UI language. */}
           <textarea
             id="draft-text"
             ref={textareaRef}
-            dir="auto"
+            // Empty: UI direction so the placeholder reads correctly; then follow the text.
+            dir={value ? 'auto' : dir}
             lang={draft.question.language}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onFocus={onFocus}
             rows={14}
-            placeholder={hasAiDraft ? undefined : 'Write the answer here. Use “Insert citation” to reference the evidence.'}
+            placeholder={hasAiDraft ? undefined : t('review.placeholder')}
             className="w-full rounded-lg border border-stone-300 bg-white p-4 leading-relaxed focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 focus:outline-none"
           />
           <div className="flex flex-wrap items-center gap-3">
@@ -58,7 +64,7 @@ export default function DraftEditor({
               disabled={!dirty || !value.trim() || saving}
               className="rounded border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:opacity-50"
             >
-              {saving ? 'Saving…' : 'Save draft'}
+              {saving ? t('review.saving') : t('review.save')}
             </button>
             {hasAiDraft && (
               <button
@@ -67,16 +73,16 @@ export default function DraftEditor({
                 disabled={isOriginal}
                 className="text-sm text-stone-600 underline disabled:no-underline disabled:opacity-50"
               >
-                Restore AI draft
+                {t('review.restore')}
               </button>
             )}
             {saveError && (
               <span role="alert" className="text-sm text-red-700">
-                {userMessage(saveError)}
+                {userMessage(saveError, i18n)}
               </span>
             )}
           </div>
-          {draft.evidence.length > 0 && <SourcesInAnswer text={value} evidence={draft.evidence} />}
+          {draft.evidence.length > 0 && <SourcesInAnswer text={value} evidence={draft.evidence} language={draft.question.language} />}
         </>
       ) : (
         <div
@@ -84,7 +90,7 @@ export default function DraftEditor({
           lang={draft.question.language}
           className="rounded-lg border border-stone-200 bg-stone-50 p-4 leading-relaxed whitespace-pre-wrap text-stone-800"
         >
-          {draft.text || <span className="text-stone-500">No answer text.</span>}
+          {draft.text || <span className="text-stone-500">{t('review.noText')}</span>}
         </div>
       )}
     </section>

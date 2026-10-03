@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router'
+import { useI18n } from '../../../i18n/core.js'
 import QueryState from '../../../shared/components/QueryState.jsx'
-import { QUESTION_STATUS_LABEL } from '../../../shared/lib/enums.js'
+import { QUESTION_STATUS_TONE } from '../../../shared/lib/enums.js'
 import { fullDate, timeAgo } from '../../../shared/lib/format.js'
 import { useMyQuestions } from '../hooks/useMyQuestions.js'
 
@@ -12,18 +13,24 @@ const TONE = {
 }
 
 function StatusChip({ status }) {
-  const { label, tone } = QUESTION_STATUS_LABEL[status] ?? { label: status, tone: 'neutral' }
-  return <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${TONE[tone]}`}>{label}</span>
+  const { t } = useI18n()
+  const tone = QUESTION_STATUS_TONE[status] ?? 'neutral'
+  return (
+    <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${TONE[tone]}`}>
+      {t(`questionStatus.${status}`, { defaultValue: status })}
+    </span>
+  )
 }
 
 /** Sidebar: the questioner's previous questions, newest first, with status. */
 export default function QuestionHistory() {
+  const { t, locale } = useI18n()
   const query = useMyQuestions()
 
   return (
     <nav aria-labelledby="question-history-heading" className="rounded-lg border border-stone-200 bg-white p-4">
       <h2 id="question-history-heading" className="font-semibold">
-        Your questions
+        {t('history.title')}
       </h2>
       <div className="mt-3">
         <QueryState query={query}>
@@ -38,13 +45,14 @@ export default function QuestionHistory() {
                         `block rounded px-2 py-2 hover:bg-stone-50 ${isActive ? 'bg-emerald-50 ring-1 ring-emerald-600/20' : ''}`
                       }
                     >
+                      {/* Question text keeps its own language/direction. */}
                       <span dir="auto" lang={q.language} className="line-clamp-2 text-sm text-stone-900">
                         {q.text}
                       </span>
                       <span className="mt-1 flex items-center gap-2">
                         <StatusChip status={q.status} />
-                        <span className="text-xs text-stone-500" title={fullDate(q.createdAt)}>
-                          {timeAgo(q.createdAt)}
+                        <span className="text-xs text-stone-500" title={fullDate(q.createdAt, locale)}>
+                          {timeAgo(q.createdAt, { locale })}
                         </span>
                       </span>
                     </NavLink>
@@ -52,7 +60,7 @@ export default function QuestionHistory() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-stone-600">No questions yet. Ask your first one.</p>
+              <p className="text-sm text-stone-600">{t('history.empty')}</p>
             )
           }
         </QueryState>

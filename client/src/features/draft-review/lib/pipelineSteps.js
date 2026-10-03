@@ -6,7 +6,8 @@ const VERIFICATION_STATUS = { PASS: 'done', NEEDS_REVIEW: 'warning', FAIL: 'fail
 /**
  * Steps for PipelineTimeline. Uses draft.pipeline when the backend sends it;
  * otherwise derives each stage's outcome from fields api.md does provide
- * (no timings).
+ * (no timings). Stage names and details are i18n keys, translated by the
+ * timeline: details = [{ key, params }].
  */
 export function pipelineSteps(draft) {
   if (draft.pipeline) return draft.pipeline
@@ -14,34 +15,36 @@ export function pipelineSteps(draft) {
   const { question, safety, evidence, generatedText, verification, aiAction } = draft
   const stopped = aiAction === AI_ACTION.REFER || safety?.decision === 'BLOCK'
   const retrieved = !stopped
+  const detail = (key, params) => ({ key, params })
 
   return [
     {
-      stage: 'Classification',
+      stage: 'classification',
       status: 'done',
-      detail: [question.level && `Level ${question.level}`, question.category?.replaceAll('_', ' ')]
-        .filter(Boolean)
-        .join(' · '),
+      details: [
+        question.level && detail('level.chip', { level: question.level }),
+        question.category && detail(`categories.${question.category}`, { defaultValue: question.category }),
+      ].filter(Boolean),
     },
     {
-      stage: 'Safety',
+      stage: 'safety',
       status: SAFETY_STATUS[safety?.decision] ?? 'skipped',
-      detail: safety?.decision?.toLowerCase(),
+      details: safety?.decision ? [detail(`safety.${safety.decision}`)] : [],
     },
     {
-      stage: 'Retrieval',
+      stage: 'retrieval',
       status: retrieved ? 'done' : 'skipped',
-      detail: retrieved ? `${evidence.length} source${evidence.length === 1 ? '' : 's'}` : null,
+      details: retrieved ? [detail('pipeline.sources', { count: evidence.length })] : [],
     },
     {
-      stage: 'Generation',
+      stage: 'generation',
       status: generatedText ? 'done' : retrieved && aiAction !== AI_ACTION.CLARIFY ? 'failed' : 'skipped',
-      detail: !generatedText && retrieved && aiAction === AI_ACTION.ABSTAIN ? 'insufficient evidence' : null,
+      details: !generatedText && retrieved && aiAction === AI_ACTION.ABSTAIN ? [detail('pipeline.insufficient')] : [],
     },
     {
-      stage: 'Verification',
+      stage: 'verification',
       status: verification ? VERIFICATION_STATUS[verification.status] ?? 'done' : 'skipped',
-      detail: verification?.badge?.label.toLowerCase(),
+      details: verification?.status ? [detail(`verification.${verification.status}`)] : [],
     },
   ]
 }

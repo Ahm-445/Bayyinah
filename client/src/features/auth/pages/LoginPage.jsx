@@ -1,14 +1,17 @@
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router'
+import { useI18n } from '../../../i18n/core.js'
 import { login } from '../../../services/api/auth.js'
-import { userMessage } from '../../../services/errors.js'
+import { isApiError, userMessage } from '../../../services/errors.js'
 import { getAuth } from '../../../services/session.js'
 import { homeFor } from '../../../shared/lib/roles.js'
 import Field from '../components/Field.jsx'
 
 /** One sign-in page for questioners, dāʿīs and admins; redirects by role. */
 export default function LoginPage() {
+  const i18n = useI18n()
+  const { t } = i18n
   const navigate = useNavigate()
   const location = useLocation()
   const [username, setUsername] = useState('')
@@ -32,28 +35,30 @@ export default function LoginPage() {
 
   return (
     <section className="mx-auto max-w-sm rounded-lg border border-stone-200 bg-white p-6">
-      <h1 className="text-xl font-semibold">Sign in</h1>
+      <h1 className="text-xl font-semibold">{t('auth.signInTitle')}</h1>
       <form onSubmit={handleSubmit} className="mt-4 space-y-4">
         <Field
           id="username"
-          label="Username"
+          label={t('auth.username')}
           required
+          dir="ltr"
           autoComplete="username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
         <Field
           id="password"
-          label="Password"
+          label={t('auth.password')}
           type="password"
           required
+          dir="ltr"
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
         {mutation.isError && (
           <p role="alert" className="text-sm text-red-700">
-            {userMessage(mutation.error)}
+            {isApiError(mutation.error, 401) ? t('auth.invalidCredentials') : userMessage(mutation.error, i18n)}
           </p>
         )}
         <button
@@ -61,21 +66,19 @@ export default function LoginPage() {
           disabled={mutation.isPending}
           className="w-full rounded bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
         >
-          {mutation.isPending ? 'Signing in…' : 'Sign in'}
+          {mutation.isPending ? t('auth.signingIn') : t('auth.signIn')}
         </button>
       </form>
       <p className="mt-4 text-sm text-stone-600">
-        New here?{' '}
+        {t('auth.newHere')}{' '}
         <Link to="/register" className="font-medium text-emerald-700 underline">
-          Create an account
+          {t('auth.createAccount')}
         </Link>{' '}
-        to ask a question.
+        {t('auth.toAsk')}
       </p>
       {/* Inline env check (not config.useMocks) so the build drops it when mocks are off. */}
       {import.meta.env.VITE_USE_MOCKS === 'true' && (
-        <p className="mt-4 text-xs text-stone-500">
-          Mock accounts (password demo1234): questioners sara, john · dāʿīs khalid, maryam · admin
-        </p>
+        <p className="mt-4 text-xs text-stone-500">{t('auth.mockAccounts')}</p>
       )}
     </section>
   )

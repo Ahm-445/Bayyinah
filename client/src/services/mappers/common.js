@@ -1,4 +1,3 @@
-import { VERIFICATION_BADGE } from '../../shared/lib/enums.js'
 
 const list = (value) => (Array.isArray(value) ? value : [])
 
@@ -38,7 +37,6 @@ export function mapVerification(raw) {
   if (!raw) return null
   return {
     status: raw.status,
-    badge: VERIFICATION_BADGE[raw.status] ?? null,
     citationValid: Boolean(raw.citationValid),
     evidenceSupported: Boolean(raw.evidenceSupported),
     unsupportedClaims: list(raw.unsupportedClaims),

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useI18n } from '../../../i18n/core.js'
 import { userMessage } from '../../../services/errors.js'
 import ConfirmDialog from '../../../shared/components/ConfirmDialog.jsx'
 import QueryState from '../../../shared/components/QueryState.jsx'
@@ -7,6 +8,8 @@ import { useAnswers, useSelectAnswer } from '../hooks/useQuestion.js'
 import AnswerCard from './AnswerCard.jsx'
 
 export default function AnswerList({ questionId }) {
+  const i18n = useI18n()
+  const { t } = i18n
   const query = useAnswers(questionId, { enabled: true })
   const select = useSelectAnswer(questionId)
   const [pending, setPending] = useState(null) // answer awaiting confirmation
@@ -19,7 +22,7 @@ export default function AnswerList({ questionId }) {
     <QueryState query={query}>
       {({ answers, selectedAnswerId }) => {
         if (!answers.length) {
-          return <StateNotice title="No answers yet">Please check back soon.</StateNotice>
+          return <StateNotice title={t('answers.noneTitle')}>{t('answers.noneBody')}</StateNotice>
         }
         const chosen = answers.find((a) => a.id === selectedAnswerId)
         const single = answers.length === 1
@@ -30,26 +33,21 @@ export default function AnswerList({ questionId }) {
           <section className="space-y-4">
             <div>
               <h2 className="text-xl font-semibold">
-                {single ? 'Your answer' : `Compare ${answers.length} answers`}
+                {single ? t('answers.yourAnswer') : t('answers.compare', { count: answers.length })}
               </h2>
               {!chosen && (
-                <p className="mt-1 text-stone-600">
-                  {single
-                    ? 'Read the answer, and select it if it helped you.'
-                    : 'Read each answer and select the one that helped you most. You can choose only one.'}
-                </p>
+                <p className="mt-1 text-stone-600">{single ? t('answers.readOne') : t('answers.readMany')}</p>
               )}
             </div>
 
             {chosen && (
-              <StateNotice title="Thank you for your choice" tone="success">
-                You selected the answer by {chosen.daee.displayName}. Your choice helps recognise the
-                dāʿīs whose answers are clearest.
+              <StateNotice title={t('answers.thanksTitle')} tone="success">
+                {t('answers.thanksBody', { name: chosen.daee.displayName })}
               </StateNotice>
             )}
             {select.isError && (
               <p role="alert" className="text-sm text-red-700">
-                {userMessage(select.error)}
+                {userMessage(select.error, i18n)}
               </p>
             )}
 
@@ -69,16 +67,14 @@ export default function AnswerList({ questionId }) {
 
             <ConfirmDialog
               open={Boolean(pending)}
-              title="Select this answer?"
-              confirmLabel={select.isPending ? 'Selecting…' : 'Yes, select it'}
+              title={t('answers.dialogTitle')}
+              confirmLabel={select.isPending ? t('answers.selecting') : t('answers.dialogConfirm')}
               busy={select.isPending}
               onConfirm={confirm}
               onCancel={() => setPending(null)}
             >
-              You are choosing the answer by {pending?.daee.displayName}.{' '}
-              {single
-                ? 'You cannot change this later.'
-                : 'You can only choose one answer for this question, and you cannot change it later.'}
+              {t('answers.dialogBody', { name: pending?.daee.displayName ?? '' })}{' '}
+              {single ? t('answers.dialogOne') : t('answers.dialogMany')}
             </ConfirmDialog>
           </section>
         )

@@ -18,13 +18,28 @@ export function isApiError(error, status, code) {
   return true
 }
 
+const STATUS_KEY = {
+  0: 'errors.network',
+  400: 'errors.badRequest',
+  401: 'errors.unauthorized',
+  403: 'errors.forbidden',
+  404: 'errors.notFound',
+  409: 'errors.conflict',
+  422: 'errors.unprocessable',
+}
+
 /**
- * Text that is safe to show the user. 4xx messages come from the backend
- * and are user-safe; 5xx and network errors get a generic message.
+ * Text that is safe to show the user, in the UI language (`i18n` from useI18n()).
+ * Known error codes are translated. In English, 4xx messages from the backend
+ * are shown as sent (docs/api.md: they are user-safe); in Arabic a translated
+ * message is picked by status. 5xx and unknown errors get a generic message.
  */
-export function userMessage(error) {
-  if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
-    return error.message
+export function userMessage(error, { t, lang }) {
+  if (!(error instanceof ApiError)) return t('errors.generic')
+  if (error.code) {
+    const byCode = t(`errors.codes.${error.code}`, { defaultValue: '' })
+    if (byCode) return byCode
   }
-  return 'Something went wrong. Please try again.'
+  if (error.status >= 400 && error.status < 500 && lang === 'en' && error.message) return error.message
+  return t(STATUS_KEY[error.status] ?? 'errors.generic')
 }

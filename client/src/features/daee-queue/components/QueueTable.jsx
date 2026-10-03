@@ -1,7 +1,8 @@
 import { Link, useNavigate } from 'react-router'
+import { useI18n } from '../../../i18n/core.js'
 import LevelChip from '../../../shared/components/LevelChip.jsx'
 import VerificationBadge from '../../../shared/components/VerificationBadge.jsx'
-import { AI_ISSUE, AI_ISSUE_LABEL } from '../../../shared/lib/enums.js'
+import { AI_ISSUE } from '../../../shared/lib/enums.js'
 import { fullDate, timeAgo } from '../../../shared/lib/format.js'
 
 const ISSUE_TONE = {
@@ -11,34 +12,36 @@ const ISSUE_TONE = {
 }
 
 function StatusCell({ item, referred }) {
-  if (referred) return <span className="text-red-700">Referred</span>
+  const { t } = useI18n()
+  if (referred) return <span className="text-red-700">{t('queue.referred')}</span>
   if (item.aiIssue) {
     return (
       <span className={`rounded px-2 py-0.5 text-xs font-medium ${ISSUE_TONE[item.aiIssue]}`}>
-        {AI_ISSUE_LABEL[item.aiIssue]}
+        {t(`aiIssue.${item.aiIssue}`)}
       </span>
     )
   }
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-stone-700">Ready for review</span>
+      <span className="text-stone-700">{t('queue.ready')}</span>
       {item.verificationStatus && <VerificationBadge status={item.verificationStatus} />}
     </div>
   )
 }
 
 export default function QueueTable({ items, now, referred = false }) {
+  const { t, locale } = useI18n()
   const navigate = useNavigate()
 
   return (
     <div className="overflow-x-auto rounded-lg border border-stone-200 bg-white">
-      <table className="w-full min-w-[40rem] table-fixed text-left text-sm">
+      <table className="w-full min-w-[40rem] table-fixed text-start text-sm">
         <thead className="border-b border-stone-200 bg-stone-50 text-xs text-stone-500">
           <tr>
-            <th scope="col" className="px-4 py-2 font-medium">Question</th>
-            <th scope="col" className="w-24 px-4 py-2 font-medium">Level</th>
-            <th scope="col" className="w-64 px-4 py-2 font-medium">Status</th>
-            <th scope="col" className="w-36 px-4 py-2 font-medium">Submitted</th>
+            <th scope="col" className="px-4 py-2 text-start font-medium">{t('queue.columns.question')}</th>
+            <th scope="col" className="w-28 px-4 py-2 text-start font-medium">{t('queue.columns.level')}</th>
+            <th scope="col" className="w-64 px-4 py-2 text-start font-medium">{t('queue.columns.status')}</th>
+            <th scope="col" className="w-36 px-4 py-2 text-start font-medium">{t('queue.columns.submitted')}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-stone-100">
@@ -49,7 +52,8 @@ export default function QueueTable({ items, now, referred = false }) {
               className="cursor-pointer hover:bg-stone-50"
             >
               <td className="px-4 py-3">
-                {/* The link keeps rows keyboard-accessible; the row click is a mouse shortcut. */}
+                {/* The link keeps rows keyboard-accessible; the row click is a mouse shortcut.
+                    Question text keeps its own direction (dir="auto"). */}
                 <Link
                   to={`/daee/drafts/${item.draftId}`}
                   dir="auto"
@@ -65,8 +69,8 @@ export default function QueueTable({ items, now, referred = false }) {
               <td className="px-4 py-3">
                 <StatusCell item={item} referred={referred} />
               </td>
-              <td className="px-4 py-3 whitespace-nowrap text-stone-600" title={fullDate(item.createdAt)}>
-                {timeAgo(item.createdAt, now)}
+              <td className="px-4 py-3 whitespace-nowrap text-stone-600" title={fullDate(item.createdAt, locale)}>
+                {timeAgo(item.createdAt, { now, locale })}
               </td>
             </tr>
           ))}

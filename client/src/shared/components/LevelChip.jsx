@@ -1,4 +1,4 @@
-import { LEVEL_LABEL } from '../lib/enums.js'
+import { useI18n } from '../../i18n/core.js'
 
 const TONE = {
   A: 'bg-sky-100 text-sky-800',
@@ -8,16 +8,16 @@ const TONE = {
 }
 
 export default function LevelChip({ level, showLabel = false }) {
+  const { t } = useI18n()
   if (!level) return null
+  const label = t(`level.${level}`, { defaultValue: '' })
   return (
     <span
-      title={LEVEL_LABEL[level]}
+      title={label}
       className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold ${TONE[level] ?? 'bg-stone-100 text-stone-700'}`}
     >
-      Level {level}
-      {showLabel && LEVEL_LABEL[level] && (
-        <span className="font-normal">· {LEVEL_LABEL[level]}</span>
-      )}
+      <span className="whitespace-nowrap">{t('level.chip', { level })}</span>
+      {showLabel && label && <span className="font-normal">· {label}</span>}
     </span>
   )
 }

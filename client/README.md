@@ -50,6 +50,20 @@ New questioner accounts can be created at `/register`. Dāʿī accounts are seed
 | `/daee` | dāʿī, admin | Work queue and stats |
 | `/daee/drafts/:id` | dāʿī, admin | Review: edit the AI draft, evidence panel, approve or reject |
 
+## Languages (English / Arabic)
+
+- All UI strings live in `src/i18n/en.js` and `src/i18n/ar.js` (same keys). Use
+  `const { t } = useI18n()` and `t('section.key', { param })`. Count keys use plural forms
+  (`one`/`other`, and Arabic `zero`/`one`/`two`/`few`/`many`/`other`).
+- The header toggle saves the choice in `localStorage` (`bayyinah.lang`). Without a choice, dāʿī
+  and admin pages open in Arabic and everything else in English.
+- Arabic sets `<html lang="ar" dir="rtl">`. Use logical Tailwind classes (`ms-`/`me-`, `ps-`/`pe-`,
+  `start`/`end`, `text-start`) so layouts mirror; never `ml-`/`pl-`/`left-`/`text-left`.
+- Fonts: IBM Plex Sans Arabic for Arabic UI text, Amiri (`font-quran`) for Qur'an text only.
+- Only the UI is translated. Questions, answers, AI drafts and backend messages keep their own
+  language and render with `dir="auto"`. "Insert citation" follows the question's language:
+  `(الذاريات 51:56)` for Arabic questions, `(Adh-Dhariyat 51:56)` for English ones.
+
 ## Pending backend confirmation
 
 The mock follows `docs/api.md` plus the team decision of 3 Oct 2026. These parts are not in

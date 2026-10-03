@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { Link, useLocation, useParams } from 'react-router'
+import { useI18n } from '../../../i18n/core.js'
 import { MY_QUESTIONS_KEY } from '../../question-history/hooks/useMyQuestions.js'
 import QueryState from '../../../shared/components/QueryState.jsx'
 import StateNotice from '../../../shared/components/StateNotice.jsx'
@@ -10,13 +11,17 @@ import AnswerList from '../components/AnswerList.jsx'
 import ProgressSteps from '../components/ProgressSteps.jsx'
 import { useQuestion } from '../hooks/useQuestion.js'
 
-const askAgain = (
-  <Link to="/ask" className="font-medium underline">
-    Ask a question
-  </Link>
-)
+function AskLink() {
+  const { t } = useI18n()
+  return (
+    <Link to="/ask" className="font-medium underline">
+      {t('question.askLink')}
+    </Link>
+  )
+}
 
 export default function QuestionPage() {
+  const { t } = useI18n()
   const { id } = useParams()
   const location = useLocation()
   const query = useQuestion(id)
@@ -26,9 +31,8 @@ export default function QuestionPage() {
       <QueryState
         query={query}
         notFound={
-          <StateNotice title="Question not found">
-            It may not exist, or it belongs to another account. Pick one of your questions, or{' '}
-            {askAgain}.
+          <StateNotice title={t('question.notFoundTitle')}>
+            {t('question.notFoundBody')} <AskLink />.
           </StateNotice>
         }
       >
@@ -41,6 +45,7 @@ export default function QuestionPage() {
 }
 
 function QuestionView({ question, justSubmitted }) {
+  const { t, locale } = useI18n()
   const { status } = question
   const inProgress = question.isProcessing || status === QUESTION_STATUS.AWAITING_REVIEW
   const queryClient = useQueryClient()
@@ -53,17 +58,18 @@ function QuestionView({ question, justSubmitted }) {
   return (
     <>
       <header>
-        <p className="text-sm text-stone-500" title={fullDate(question.createdAt)}>
-          Your question · asked {timeAgo(question.createdAt)}
+        <p className="text-sm text-stone-500" title={fullDate(question.createdAt, locale)}>
+          {t('question.asked', { time: timeAgo(question.createdAt, { locale }) })}
         </p>
+        {/* Content keeps its own language and direction, whatever the UI language. */}
         <h1 dir="auto" lang={question.language} className="mt-1 text-2xl font-semibold text-stone-900">
           {question.text}
         </h1>
       </header>
 
       {justSubmitted && (
-        <StateNotice title="Your question was sent" tone="success">
-          It is saved in your account under “Your questions”. This page updates automatically.
+        <StateNotice title={t('question.sentTitle')} tone="success">
+          {t('question.sentBody')}
         </StateNotice>
       )}
 
@@ -71,24 +77,20 @@ function QuestionView({ question, justSubmitted }) {
         <section className="rounded-lg border border-stone-200 bg-white p-5">
           <ProgressSteps status={status} />
           <p className="mt-4 text-sm text-stone-600">
-            {status === QUESTION_STATUS.AWAITING_REVIEW
-              ? 'Dāʿīs are reviewing your question. Answers appear here as soon as one is approved. You can close this page and come back later.'
-              : 'This page updates automatically.'}
+            {status === QUESTION_STATUS.AWAITING_REVIEW ? t('question.reviewingNote') : t('question.autoUpdate')}
           </p>
         </section>
       )}
 
       {status === QUESTION_STATUS.REFERRED && (
-        <StateNotice title="This question needs a scholar" tone="warning">
-          Your question asks for a personal religious ruling (fatwa), which depends on individual
-          circumstances. Bayyinah only answers general questions, so we recommend asking a qualified
-          scholar directly.
+        <StateNotice title={t('question.referredTitle')} tone="warning">
+          {t('question.referredBody')}
         </StateNotice>
       )}
 
       {status === QUESTION_STATUS.FAILED && (
-        <StateNotice title="We could not process your question" tone="danger">
-          Something went wrong on our side. Please try again: {askAgain}.
+        <StateNotice title={t('question.failedTitle')} tone="danger">
+          {t('question.failedBody')} <AskLink />.
         </StateNotice>
       )}
 

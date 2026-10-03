@@ -1,8 +1,11 @@
 import { useState } from 'react'
+import { useI18n } from '../../../i18n/core.js'
 import { userMessage } from '../../../services/errors.js'
 import { detectLanguage, MAX_LENGTH } from '../lib/question.js'
 
 export default function QuestionForm({ onSubmit, submitting, error }) {
+  const i18n = useI18n()
+  const { t, dir } = i18n
   const [text, setText] = useState('')
   const [touched, setTouched] = useState(false)
   const trimmed = text.trim()
@@ -14,24 +17,26 @@ export default function QuestionForm({ onSubmit, submitting, error }) {
     event.preventDefault()
     setTouched(true)
     if (invalid || submitting) return
+    // The question's language comes from its text, not from the UI language.
     onSubmit({ text: trimmed, language: detectLanguage(trimmed) })
   }
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-3">
       <label htmlFor="question" className="block font-medium">
-        Your question
+        {t('ask.label')}
       </label>
       <textarea
         id="question"
-        dir="auto"
+        // Empty: UI direction so the placeholder reads correctly; then follow the text.
+        dir={text ? 'auto' : dir}
         rows={6}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onBlur={() => setTouched(true)}
         aria-invalid={showError}
         aria-describedby="question-help"
-        placeholder="For example: What do Muslims believe about God?"
+        placeholder={t('ask.placeholder')}
         className={`w-full rounded-lg border bg-white p-4 leading-relaxed focus:ring-2 focus:outline-none ${
           showError
             ? 'border-red-400 focus:ring-red-500/20'
@@ -42,17 +47,17 @@ export default function QuestionForm({ onSubmit, submitting, error }) {
         <span className={showError ? 'text-red-700' : 'text-stone-500'}>
           {showError
             ? tooLong
-              ? `Please shorten your question to ${MAX_LENGTH} characters.`
-              : 'Please write your question.'
-            : 'Please do not include personal details such as your name or contact information.'}
+              ? t('ask.tooLong', { max: MAX_LENGTH })
+              : t('ask.empty')
+            : t('ask.privacy')}
         </span>
-        <span className={`tabular-nums ${tooLong ? 'text-red-700' : 'text-stone-500'}`}>
+        <span dir="ltr" className={`tabular-nums ${tooLong ? 'text-red-700' : 'text-stone-500'}`}>
           {trimmed.length}/{MAX_LENGTH}
         </span>
       </div>
       {error && (
         <p role="alert" className="text-sm text-red-700">
-          {userMessage(error)}
+          {userMessage(error, i18n)}
         </p>
       )}
       <button
@@ -60,7 +65,7 @@ export default function QuestionForm({ onSubmit, submitting, error }) {
         disabled={submitting}
         className="rounded bg-emerald-700 px-5 py-2.5 font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
       >
-        {submitting ? 'Sending…' : 'Send question'}
+        {submitting ? t('ask.sending') : t('ask.send')}
       </button>
     </form>
   )

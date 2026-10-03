@@ -1,3 +1,4 @@
+import { useI18n } from '../../../i18n/core.js'
 import QueryState from '../../../shared/components/QueryState.jsx'
 import QueueTable from '../components/QueueTable.jsx'
 import StatsBar from '../components/StatsBar.jsx'
@@ -13,11 +14,12 @@ function EmptyState({ children }) {
 }
 
 export default function QueuePage() {
+  const { t } = useI18n()
   const query = useDashboard()
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Work queue</h1>
+      <h1 className="text-2xl font-semibold">{t('queue.title')}</h1>
       <QueryState query={query}>
         {(dashboard) => {
           const { pending, referred } = splitQueue(dashboard.queue)
@@ -28,26 +30,24 @@ export default function QueuePage() {
               {/* Pending is counted from the same split as the list below, so they always match. */}
               <StatsBar stats={{ ...dashboard.stats, pending: pending.length }} />
 
-              <section className="space-y-2">
-                <h2 className="font-semibold">
-                  Needs review <span className="font-normal text-stone-500">({pending.length})</span>
+              <section aria-labelledby="queue-needs-review" className="space-y-2">
+                <h2 id="queue-needs-review" className="font-semibold">
+                  {t('queue.needsReview')} <span className="font-normal text-stone-500">({pending.length})</span>
                 </h2>
                 {pending.length ? (
                   <QueueTable items={pending} now={now} />
                 ) : (
-                  <EmptyState>No drafts are waiting for review.</EmptyState>
+                  <EmptyState>{t('queue.empty')}</EmptyState>
                 )}
               </section>
 
               {referred.length > 0 && (
-                <section className="space-y-2">
-                  <h2 className="font-semibold">
-                    Referred (Level D){' '}
+                <section aria-labelledby="queue-referred" className="space-y-2">
+                  <h2 id="queue-referred" className="font-semibold">
+                    {t('queue.referredTitle')}{' '}
                     <span className="font-normal text-stone-500">({referred.length})</span>
                   </h2>
-                  <p className="text-sm text-stone-600">
-                    Personal rulings are referred to a scholar. Open one only if you need to write an answer anyway.
-                  </p>
+                  <p className="text-sm text-stone-600">{t('queue.referredNote')}</p>
                   <QueueTable items={referred} now={now} referred />
                 </section>
               )}

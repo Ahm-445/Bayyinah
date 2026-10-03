@@ -1,4 +1,5 @@
 import { createBrowserRouter } from 'react-router'
+import I18nProvider from '../i18n/I18nProvider.jsx'
 import AdminEvalPage from '../features/admin-eval/pages/AdminEvalPage.jsx'
 import AskPage from '../features/ask/pages/AskPage.jsx'
 import LoginPage from '../features/auth/pages/LoginPage.jsx'
@@ -19,47 +20,54 @@ const STAFF = [ROLE.DAEE, ROLE.ADMIN]
 
 export const router = createBrowserRouter([
   {
-    element: <AuthLayout />,
+    // Root: UI language (en/ar) and <html lang/dir> for every page.
+    element: <I18nProvider />,
     errorElement: <RouteError />,
     children: [
-      { index: true, element: <HomeRedirect /> },
-      { path: 'login', element: <LoginPage /> },
-      { path: 'register', element: <RegisterPage /> },
-      { path: '*', element: <NotFoundPage /> },
+      {
+        element: <AuthLayout />,
+        errorElement: <RouteError />,
+        children: [
+          { index: true, element: <HomeRedirect /> },
+          { path: 'login', element: <LoginPage /> },
+          { path: 'register', element: <RegisterPage /> },
+          { path: '*', element: <NotFoundPage /> },
+        ],
+      },
+      {
+        // Questioner dashboard: ask box or an open question, plus the history sidebar.
+        element: (
+          <RequireRole roles={[ROLE.QUESTIONER]}>
+            <QuestionerLayout />
+          </RequireRole>
+        ),
+        errorElement: <RouteError />,
+        children: [
+          { path: 'ask', element: <AskPage /> },
+          { path: 'questions/:id', element: <QuestionPage /> },
+        ],
+      },
+      {
+        element: (
+          <RequireRole roles={STAFF}>
+            <DaeeLayout />
+          </RequireRole>
+        ),
+        errorElement: <RouteError />,
+        children: [
+          { path: 'daee', element: <QueuePage /> },
+          { path: 'daee/drafts/:id', element: <DraftReviewPage /> },
+        ],
+      },
+      {
+        element: (
+          <RequireRole roles={[ROLE.ADMIN]}>
+            <DaeeLayout />
+          </RequireRole>
+        ),
+        errorElement: <RouteError />,
+        children: [{ path: 'admin/eval', element: <AdminEvalPage /> }],
+      },
     ],
-  },
-  {
-    // Questioner dashboard: ask box or an open question, plus the history sidebar.
-    element: (
-      <RequireRole roles={[ROLE.QUESTIONER]}>
-        <QuestionerLayout />
-      </RequireRole>
-    ),
-    errorElement: <RouteError />,
-    children: [
-      { path: 'ask', element: <AskPage /> },
-      { path: 'questions/:id', element: <QuestionPage /> },
-    ],
-  },
-  {
-    element: (
-      <RequireRole roles={STAFF}>
-        <DaeeLayout />
-      </RequireRole>
-    ),
-    errorElement: <RouteError />,
-    children: [
-      { path: 'daee', element: <QueuePage /> },
-      { path: 'daee/drafts/:id', element: <DraftReviewPage /> },
-    ],
-  },
-  {
-    element: (
-      <RequireRole roles={[ROLE.ADMIN]}>
-        <DaeeLayout />
-      </RequireRole>
-    ),
-    errorElement: <RouteError />,
-    children: [{ path: 'admin/eval', element: <AdminEvalPage /> }],
   },
 ])

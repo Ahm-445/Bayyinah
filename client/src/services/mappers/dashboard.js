@@ -1,4 +1,3 @@
-import { VERIFICATION_BADGE } from '../../shared/lib/enums.js'
 import { list } from './common.js'
 
 /** GET /api/daee/dashboard → UI view model. */
@@ -20,7 +19,6 @@ export function mapDashboard(raw) {
       // Optional (not in api.md; the mock sends it): lets the queue label AI issues exactly.
       aiAction: item.aiAction ?? null,
       verificationStatus: item.verificationStatus ?? null,
-      badge: VERIFICATION_BADGE[item.verificationStatus] ?? null,
       status: item.status,
       createdAt: item.createdAt ?? null,
     })),
