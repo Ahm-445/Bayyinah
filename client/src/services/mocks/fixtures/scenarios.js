@@ -3,13 +3,15 @@ import { EVIDENCE as E, citationsFor, weak } from './evidence.js'
 // Raw backend shapes (docs/api.md). Fields starting with "_" are mock-internal
 // bookkeeping and are stripped before a response leaves the adapter.
 //
-// Draft scenarios for usr_daee_1 (the main demo account):
+// Draft scenarios for usr_daee_1 / khalid (the main demo account).
+// The AI never blocks the dāʿī: every open draft can be edited and approved;
+// AI issues and level D only require the responsibility checkbox.
 //   drf_1  level A, ANSWER, PASS            → in_review, approvable
-//   drf_2  level B, ANSWER, NEEDS_REVIEW    → in_review, needs acknowledgeWarnings
-//   drf_3  ABSTAIN before generation        → blocked, no draft, verification null
-//   drf_4  ABSTAIN after citation FAIL      → blocked, draft present
-//   drf_5  level D, REFER                   → blocked, referral view
-//   drf_6  CLARIFY (no backend rule yet)    → neutral "needs clarification"
+//   drf_2  level B, ANSWER, NEEDS_REVIEW    → in_review, warnings checkbox
+//   drf_3  ABSTAIN before generation        → "AI couldn't draft": empty editor
+//   drf_4  ABSTAIN after citation FAIL      → "Verification failed": AI draft editable
+//   drf_5  level D, REFER                   → referral notice, "Write an answer anyway"
+//   drf_6  CLARIFY                          → "Unclear question": empty editor
 //   drf_7  already approved                 → published as ans_1
 // q_2 has two published answers (ans_1, ans_2) for the compare screen.
 

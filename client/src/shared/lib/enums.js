@@ -62,14 +62,33 @@ export const LEVEL_LABEL = Object.freeze({
 
 /**
  * Which screen the dāʿī sees for a draft.
- * - review:       normal editable draft (may still be blocked by a failed citation check)
- * - referral:     level D / REFER, never answered
- * - clarify:      CLARIFY, no backend rule yet (neutral state)
- * - insufficient: ABSTAIN before generation, nothing to edit
+ * - review:   the editor (AI draft, or empty when the AI did not draft)
+ * - referral: level D / REFER, referral notice first ("Write an answer anyway" optional)
  */
 export const DRAFT_VIEW = Object.freeze({
   REVIEW: 'review',
   REFERRAL: 'referral',
-  CLARIFY: 'clarify',
-  INSUFFICIENT: 'insufficient',
 })
+
+/**
+ * Why the AI could not produce a usable draft. Advisory only: the AI never
+ * blocks the dāʿī, but approving needs an explicit responsibility checkbox.
+ */
+export const AI_ISSUE = Object.freeze({
+  INSUFFICIENT: 'insufficient', // ABSTAIN before generation: no draft
+  VERIFICATION_FAILED: 'verification_failed', // draft exists, verification FAIL
+  CLARIFY: 'clarify', // question too unclear: no draft
+})
+
+/** Queue / review labels for each AI issue. */
+export const AI_ISSUE_LABEL = Object.freeze({
+  insufficient: "AI couldn't draft",
+  verification_failed: 'Verification failed',
+  clarify: 'Unclear question',
+})
+
+/**
+ * Level D override: lets a dāʿī "Write an answer anyway" behind a strong
+ * warning. The team may remove this; set to false to hide it everywhere.
+ */
+export const ALLOW_LEVEL_D_OVERRIDE = true

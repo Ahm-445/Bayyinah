@@ -2,7 +2,9 @@ import { useCallback, useRef, useState } from 'react'
 import { Link, useBeforeUnload, useBlocker, useParams } from 'react-router'
 import QueryState from '../../../shared/components/QueryState.jsx'
 import { isCitedIn, readableReference } from '../../../shared/lib/references.js'
-import { DRAFT_VIEW } from '../../../shared/lib/enums.js'
+import { ALLOW_LEVEL_D_OVERRIDE, DRAFT_VIEW } from '../../../shared/lib/enums.js'
+import ConfirmDialog from '../../../shared/components/ConfirmDialog.jsx'
+import AiIssueNotice from '../components/AiIssueNotice.jsx'
 import DraftEditor from '../components/DraftEditor.jsx'
 import EvidencePanel from '../components/EvidencePanel.jsx'
 import QuestionPanel from '../components/QuestionPanel.jsx'
@@ -31,39 +33,57 @@ export default function DraftReviewPage() {
 }
 
 function DraftReview({ draft }) {
+  const [writeAnyway, setWriteAnyway] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const isReferral = draft.view === DRAFT_VIEW.REFERRAL
+  // Level D shows only the referral notice until the dāʿī chooses to write anyway.
+  // A closed level D draft (answered or rejected earlier) shows its result.
+  const referralOnly = isReferral && !draft.isClosed && !writeAnyway
+
   return (
     <>
       <QuestionPanel draft={draft} />
-      {draft.view === DRAFT_VIEW.REVIEW && <ReviewBody draft={draft} />}
 
-      {draft.view === DRAFT_VIEW.REFERRAL && (
+      {isReferral && (
         <StateNotice title="Referred: personal ruling (Level D)" tone="danger">
-          Bayyinah does not answer requests for a personal fatwa. This question is referred to a
-          qualified scholar and no AI draft was generated.
+          <p>
+            Bayyinah does not answer requests for a personal fatwa. This question is referred to a
+            qualified scholar and no AI draft was generated.
+          </p>
+          {referralOnly && ALLOW_LEVEL_D_OVERRIDE && (
+            <button
+              type="button"
+              onClick={() => setConfirming(true)}
+              className="mt-3 rounded border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-800 hover:bg-red-50"
+            >
+              Write an answer anyway
+            </button>
+          )}
         </StateNotice>
       )}
 
-      {draft.view === DRAFT_VIEW.CLARIFY && (
-        <StateNotice title="Needs clarification">
-          The AI judged this question too unclear to answer, so no draft was generated. How
-          clarification requests are handled has not been decided yet.
-        </StateNotice>
-      )}
+      {!referralOnly && <ReviewBody draft={draft} />}
 
-      {draft.view === DRAFT_VIEW.INSUFFICIENT && (
-        <div className="grid gap-6 lg:grid-cols-12">
-          <div className="space-y-4 lg:col-span-7">
-            <StateNotice title="Insufficient evidence" tone="warning">
-              The approved sources did not contain enough evidence to draft an answer, so no draft
-              was generated. The retrieved sources are listed for reference.
-            </StateNotice>
-            <ReviewActions draft={draft} unsavedText={null} allowApprove={false} />
-          </div>
-          <div className="lg:col-span-5">
-            <EvidencePanel evidence={draft.evidence} />
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={confirming}
+        danger
+        title="Answer a personal ruling (Level D)?"
+        confirmLabel="I understand, write an answer"
+        onConfirm={() => {
+          setConfirming(false)
+          setWriteAnyway(true)
+        }}
+        onCancel={() => setConfirming(false)}
+      >
+        <p>
+          This question asks for a personal ruling (fatwa) that depends on the questioner’s own
+          circumstances. Bayyinah refers these to a qualified scholar.
+        </p>
+        <p className="mt-2 font-medium text-red-800">
+          Only continue if you are qualified to give this ruling. You will write the answer yourself,
+          with no AI draft, and you are personally responsible for it.
+        </p>
+      </ConfirmDialog>
     </>
   )
 }
@@ -71,10 +91,11 @@ function DraftReview({ draft }) {
 function ReviewBody({ draft }) {
   const [text, setText] = useState(draft.text)
   const save = useSaveDraft(draft.id)
-  const dirty = draft.canEdit && text !== draft.text
+  const editable = draft.canEdit
+  const dirty = editable && text !== draft.text
   const textareaRef = useRef(null)
   const editorFocused = useRef(false) // until the dāʿī places a caret, insert at the end
-  const shownText = draft.canEdit ? text : draft.text
+  const shownText = editable ? text : draft.text
 
   /**
    * Inserts a readable reference such as "(Adh-Dhariyat 51:56)" at the caret,
@@ -110,8 +131,10 @@ function ReviewBody({ draft }) {
   return (
     <div className="grid gap-6 lg:grid-cols-12">
       <div className="space-y-4 lg:col-span-7">
+        {!draft.isClosed && <AiIssueNotice draft={draft} />}
         <DraftEditor
           draft={draft}
+          editable={editable}
           value={text}
           onChange={setText}
           onFocus={() => (editorFocused.current = true)}
@@ -127,7 +150,7 @@ function ReviewBody({ draft }) {
         <EvidencePanel
           evidence={draft.evidence}
           isCited={(item) => isCitedIn(shownText, item)}
-          onInsert={draft.canEdit ? insertCitation : undefined}
+          onInsert={editable ? insertCitation : undefined}
         />
       </div>
 

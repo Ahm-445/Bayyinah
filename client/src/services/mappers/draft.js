@@ -1,27 +1,34 @@
-import { AI_ACTION, DRAFT_STATUS, DRAFT_VIEW } from '../../shared/lib/enums.js'
+import { AI_ACTION, AI_ISSUE, DRAFT_STATUS, DRAFT_VIEW } from '../../shared/lib/enums.js'
 import { list, mapCitation, mapEvidence, mapPipeline, mapVerification } from './common.js'
 
-function draftView(aiAction, level, generatedText) {
-  if (aiAction === AI_ACTION.REFER || level === 'D') return DRAFT_VIEW.REFERRAL
-  if (aiAction === AI_ACTION.CLARIFY) return DRAFT_VIEW.CLARIFY
-  if (!generatedText) return DRAFT_VIEW.INSUFFICIENT
-  return DRAFT_VIEW.REVIEW
+/** Advisory reason the AI did not give a usable draft, or null. */
+function aiIssueOf(aiAction, generatedText, verification) {
+  if (aiAction === AI_ACTION.CLARIFY) return AI_ISSUE.CLARIFY
+  if (!generatedText) return AI_ISSUE.INSUFFICIENT
+  if (verification?.status === 'FAIL') return AI_ISSUE.VERIFICATION_FAILED
+  return null
 }
 
-/** Draft (dāʿī view), docs/api.md 2.3 → UI view model. */
+/**
+ * Draft (dāʿī view), docs/api.md 2.3 → UI view model.
+ * Product rule: the AI never blocks the dāʿī; verification is advisory.
+ * A `blocked` status from the API is shown as an AI issue, not a lock.
+ */
 export function mapDraft(raw) {
   const classification = raw.question?.classification ?? {}
   const generatedText = raw.generatedText ?? null
   const status = raw.status
-  const isBlocked = status === DRAFT_STATUS.BLOCKED
   const isClosed = status === DRAFT_STATUS.APPROVED || status === DRAFT_STATUS.REJECTED
-  const view = draftView(raw.aiAction, classification.level, generatedText)
+  const isReferral = raw.aiAction === AI_ACTION.REFER || classification.level === 'D'
+  const verification = mapVerification(raw.verification)
+  const aiIssue = isReferral ? null : aiIssueOf(raw.aiAction, generatedText, verification)
 
   return {
     id: raw.id,
     status,
     aiAction: raw.aiAction ?? null,
-    view,
+    view: isReferral ? DRAFT_VIEW.REFERRAL : DRAFT_VIEW.REVIEW,
+    aiIssue,
     question: {
       id: raw.question?.id,
       text: raw.question?.text ?? '',
@@ -36,13 +43,14 @@ export function mapDraft(raw) {
     versions: list(raw.versions),
     evidence: list(raw.evidence).map(mapEvidence),
     citations: list(raw.citations).map(mapCitation),
-    verification: mapVerification(raw.verification),
+    verification,
     requiresAcknowledgement: Boolean(raw.requiresAcknowledgement),
+    // AI issue or level D: approving needs "I have reviewed this answer and take responsibility for it".
+    requiresResponsibility: Boolean(aiIssue) || isReferral,
     pipeline: mapPipeline(raw.pipeline),
-    isBlocked,
     isClosed,
-    canEdit: view === DRAFT_VIEW.REVIEW && !isBlocked && !isClosed,
-    // The backend enforces this too (422 blocked / warnings_not_acknowledged).
-    canApprove: status === DRAFT_STATUS.IN_REVIEW && view === DRAFT_VIEW.REVIEW,
+    // Open drafts are always editable and approvable (text must not be empty);
+    // level D only after the dāʿī chooses "Write an answer anyway".
+    canEdit: !isClosed,
   }
 }

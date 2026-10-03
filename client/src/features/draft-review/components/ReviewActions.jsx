@@ -5,15 +5,16 @@ import { DRAFT_STATUS } from '../../../shared/lib/enums.js'
 import { useApproveDraft, useRejectDraft } from '../hooks/useDraft.js'
 import StateNotice from '../../../shared/components/StateNotice.jsx'
 
-const BLOCKED_REASON = {
-  FAIL: 'Verification failed: the draft cites sources that were not retrieved or makes claims the evidence does not support.',
-}
-
 /**
  * Approve / reject controls. `unsavedText` is the edited text when it differs
  * from the saved draft, otherwise null; approving saves it first.
+ *
+ * The AI never blocks approval. When the AI could not give a usable draft
+ * (or the question is level D), approving needs the responsibility checkbox;
+ * a NEEDS_REVIEW draft needs the warnings checkbox. Both send
+ * `acknowledgeWarnings: true` (docs/api.md field, wider use pending backend).
  */
-export default function ReviewActions({ draft, unsavedText, allowApprove = true }) {
+export default function ReviewActions({ draft, unsavedText }) {
   const [acknowledged, setAcknowledged] = useState(false)
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState('')
@@ -36,22 +37,17 @@ export default function ReviewActions({ draft, unsavedText, allowApprove = true 
     )
   }
 
-  const emptyEdit = unsavedText != null && !unsavedText.trim()
-  const needsAck = draft.requiresAcknowledgement && !acknowledged
-  const canApprove = allowApprove && draft.canApprove && !needsAck && !emptyEdit && !busy
+  const currentText = unsavedText ?? draft.text
+  const isEmpty = !currentText.trim()
+  const needsCheckbox = draft.requiresResponsibility || draft.requiresAcknowledgement
+  const canApprove = !isEmpty && (!needsCheckbox || acknowledged) && !busy
   const error = approve.error ?? reject.error
 
   return (
     <section className="space-y-3 rounded-lg border border-stone-200 bg-white p-4">
-      {draft.isBlocked && allowApprove && (
-        <p className="text-sm text-red-800">
-          <span className="font-semibold">Approval blocked.</span>{' '}
-          {BLOCKED_REASON[draft.verification?.status] ??
-            'This draft did not pass the automatic checks and cannot be published.'}
-        </p>
-      )}
+      {isEmpty && <p className="text-sm text-stone-600">Write the answer before approving.</p>}
 
-      {draft.requiresAcknowledgement && draft.canApprove && (
+      {needsCheckbox && (
         <label className="flex items-start gap-2 text-sm text-amber-900">
           <input
             type="checkbox"
@@ -59,7 +55,11 @@ export default function ReviewActions({ draft, unsavedText, allowApprove = true 
             onChange={(e) => setAcknowledged(e.target.checked)}
             className="mt-1"
           />
-          <span>I have read the verification warnings and take responsibility for this answer.</span>
+          <span>
+            {draft.requiresResponsibility
+              ? 'I have reviewed this answer and take responsibility for it'
+              : 'I have read the verification warnings and take responsibility for this answer.'}
+          </span>
         </label>
       )}
 
@@ -101,16 +101,14 @@ export default function ReviewActions({ draft, unsavedText, allowApprove = true 
         </form>
       ) : (
         <div className="flex flex-wrap items-center gap-3">
-          {allowApprove && (
-            <button
-              type="button"
-              disabled={!canApprove}
-              onClick={() => approve.mutate({ unsavedText, acknowledgeWarnings: acknowledged })}
-              className="rounded bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-500"
-            >
-              {approve.isPending ? 'Publishing…' : unsavedText != null ? 'Save & approve' : 'Approve & publish'}
-            </button>
-          )}
+          <button
+            type="button"
+            disabled={!canApprove}
+            onClick={() => approve.mutate({ unsavedText, acknowledgeWarnings: acknowledged })}
+            className="rounded bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-500"
+          >
+            {approve.isPending ? 'Publishing…' : unsavedText != null ? 'Save & approve' : 'Approve & publish'}
+          </button>
           <button
             type="button"
             onClick={() => setRejecting(true)}

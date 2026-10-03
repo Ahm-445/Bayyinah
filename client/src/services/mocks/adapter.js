@@ -4,6 +4,7 @@ import { clearAuth, getAuth } from '../session.js'
 import { EVIDENCE, citationsFor } from './fixtures/evidence.js'
 import { ANSWERS, DRAFTS, QUESTIONS } from './fixtures/scenarios.js'
 import { SOURCES } from './fixtures/sources.js'
+import { scoreFor } from './scoring.js'
 import { USERS } from './fixtures/users.js'
 
 // Mock of the REST API in docs/api.md, part 2, updated for the team decision
@@ -16,7 +17,7 @@ import { USERS } from './fixtures/users.js'
 // Error codes: already_selected, blocked, warnings_not_acknowledged (api.md),
 // username_taken (pending); other errors have no code.
 
-const STORAGE_KEY = 'bayyinah.mockDb.v3'
+const STORAGE_KEY = 'bayyinah.mockDb.v4'
 
 function seed() {
   return {
@@ -215,7 +216,7 @@ const routes = [
     if (db.users.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
       fail(409, 'That username is already taken.', 'username_taken')
     }
-    const user = { id: newId('usr'), username, password, displayName: username, role: 'questioner', score: 0 }
+    const user = { id: newId('usr'), username, password, displayName: username, role: 'questioner' }
     db.users.push(user)
     return [201, session(user)]
   }],
@@ -281,7 +282,7 @@ const routes = [
         approved: count((d) => d.status === 'approved'),
         rejected: count((d) => d.status === 'rejected'),
         referred: count((d) => d.aiAction === 'REFER'),
-        score: db.users.find((u) => u.id === user.id)?.score ?? 0,
+        score: scoreFor(user.id, db), // derived; rules in mocks/scoring.js (pending)
       },
       queue: mine
         .filter((d) => !isClosed(d))
@@ -292,6 +293,7 @@ const routes = [
           questionText: d.question.text,
           level: d.question.classification.level,
           verificationStatus: d.verification?.status ?? null,
+          aiAction: d.aiAction, // optional extra (not in api.md), pending backend
           status: d.status,
           createdAt: d._createdAt,
         })),
@@ -311,10 +313,20 @@ const routes = [
   ['POST', '/drafts/:id/approve', (ctx) => {
     const draft = findOwnDraft(ctx, ctx.params.id)
     if (isClosed(draft)) fail(409, `This draft was already ${draft.status}.`)
-    if (draft.status === 'blocked') fail(422, 'This draft is blocked and cannot be approved.', 'blocked')
-    if (draft.requiresAcknowledgement && ctx.body?.acknowledgeWarnings !== true) {
-      fail(422, 'Please acknowledge the verification warnings before approving.', 'warnings_not_acknowledged')
+    // Product rule: the AI never blocks the dāʿī. There is no 422 `blocked` any
+    // more; when the AI could not give a usable draft (blocked / CLARIFY /
+    // verification FAIL) or the question is level D, the dāʿī must acknowledge
+    // responsibility (acknowledgeWarnings: true), as for NEEDS_REVIEW warnings.
+    const needsAcknowledgement =
+      draft.requiresAcknowledgement ||
+      draft.status === 'blocked' ||
+      draft.aiAction === 'CLARIFY' ||
+      draft.verification?.status === 'FAIL' ||
+      draft.question.classification.level === 'D'
+    if (needsAcknowledgement && ctx.body?.acknowledgeWarnings !== true) {
+      fail(422, 'Please confirm you have reviewed this answer and take responsibility for it.', 'warnings_not_acknowledged')
     }
+    if (!draft.text?.trim()) fail(400, 'Write the answer before approving.')
     const user = db.users.find((u) => u.id === draft._daeeId) ?? ctx.user
     // The questioner never sees citations; the dāʿī cites sources in the text.
     const answer = {
@@ -322,8 +334,8 @@ const routes = [
       daee: { id: user.id, displayName: user.displayName },
       finalText: draft.text,
       citations: draft.citations,
-      verificationStatus: draft.verification?.status ?? 'NEEDS_REVIEW',
-      aiAssisted: true,
+      verificationStatus: draft.verification?.status ?? null,
+      aiAssisted: Boolean(draft.generatedText),
       publishedAt: now(),
       _questionId: draft.question.id,
       _draftId: draft.id,

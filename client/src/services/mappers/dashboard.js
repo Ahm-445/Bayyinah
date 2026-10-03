@@ -17,6 +17,8 @@ export function mapDashboard(raw) {
       questionId: item.questionId,
       questionText: item.questionText ?? '',
       level: item.level ?? null,
+      // Optional (not in api.md; the mock sends it): lets the queue label AI issues exactly.
+      aiAction: item.aiAction ?? null,
       verificationStatus: item.verificationStatus ?? null,
       badge: VERIFICATION_BADGE[item.verificationStatus] ?? null,
       status: item.status,

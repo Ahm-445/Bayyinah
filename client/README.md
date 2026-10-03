@@ -61,6 +61,21 @@ The mock follows `docs/api.md` plus the team decision of 3 Oct 2026. These parts
   are visible only to the account that asked it (others get `404`), and only that account can select
   an answer.
 - `GET /api/questions` returns the signed-in questioner's questions: `{ questions: Question[] }`.
+- **The AI never blocks the dāʿī** (decided product rule; backend to align). Verification is
+  advisory: there is no `422 blocked`. When the AI could not draft (insufficient evidence or
+  unclear question), verification failed, or the question is Level D, the dāʿī can still write or
+  edit and approve, after ticking "I have reviewed this answer and take responsibility for it". The
+  client sends this as `acknowledgeWarnings: true` (the existing field); without it the mock
+  returns `422 warnings_not_acknowledged`. Approving empty text returns `400`.
+- Level D shows the referral notice with a "Write an answer anyway" option behind a strong warning.
+  It can be switched off with `ALLOW_LEVEL_D_OVERRIDE` in `src/shared/lib/enums.js`.
+- Queue items may include `aiAction` (the mock sends it) so the queue can label "AI couldn't
+  draft", "Verification failed" and "Unclear question" exactly. Without it the client derives the
+  label from `status` and `verificationStatus`.
+- **Scoring (proposed, pending team agreement):** +1 point to a dāʿī for each answer they publish,
+  +10 when a questioner selects their answer. The score is recomputed from the data, never stored.
+  The values live only in the mock, in `src/services/mocks/scoring.js`; the client just shows
+  `dashboard.stats.score`.
 
 Questioners never see sources lists or verification status. Dāʿīs mention sources inside the answer
 text; "Insert citation" adds a readable reference such as `(Adh-Dhariyat 51:56)`.

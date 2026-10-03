@@ -20,7 +20,7 @@ export default function QueuePage() {
       <h1 className="text-2xl font-semibold">Work queue</h1>
       <QueryState query={query}>
         {(dashboard) => {
-          const { pending, parked } = splitQueue(dashboard.queue)
+          const { pending, referred } = splitQueue(dashboard.queue)
           // Re-evaluated on each refetch, so "time since" stays roughly current.
           const now = query.dataUpdatedAt
           return (
@@ -39,16 +39,16 @@ export default function QueuePage() {
                 )}
               </section>
 
-              {parked.length > 0 && (
+              {referred.length > 0 && (
                 <section className="space-y-2">
                   <h2 className="font-semibold">
-                    Referred / Needs clarification{' '}
-                    <span className="font-normal text-stone-500">({parked.length})</span>
+                    Referred (Level D){' '}
+                    <span className="font-normal text-stone-500">({referred.length})</span>
                   </h2>
                   <p className="text-sm text-stone-600">
-                    No action is needed from you on these. They are listed for reference.
+                    Personal rulings are referred to a scholar. Open one only if you need to write an answer anyway.
                   </p>
-                  <QueueTable items={parked} now={now} />
+                  <QueueTable items={referred} now={now} referred />
                 </section>
               )}
             </>

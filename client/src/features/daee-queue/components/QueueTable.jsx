@@ -1,30 +1,33 @@
 import { Link, useNavigate } from 'react-router'
 import LevelChip from '../../../shared/components/LevelChip.jsx'
 import VerificationBadge from '../../../shared/components/VerificationBadge.jsx'
-import { DRAFT_STATUS } from '../../../shared/lib/enums.js'
+import { AI_ISSUE, AI_ISSUE_LABEL } from '../../../shared/lib/enums.js'
 import { fullDate, timeAgo } from '../../../shared/lib/format.js'
-import { PARKED_REASON } from '../lib/queueSections.js'
 
-function StatusCell({ item }) {
-  if (item.parkedReason === PARKED_REASON.REFERRAL) {
-    return <span className="text-red-700">Referred</span>
-  }
-  if (item.parkedReason === PARKED_REASON.CLARIFY) {
-    return <span className="text-stone-600">Needs clarification</span>
+const ISSUE_TONE = {
+  [AI_ISSUE.INSUFFICIENT]: 'bg-amber-100 text-amber-800',
+  [AI_ISSUE.VERIFICATION_FAILED]: 'bg-red-100 text-red-800',
+  [AI_ISSUE.CLARIFY]: 'bg-stone-100 text-stone-700',
+}
+
+function StatusCell({ item, referred }) {
+  if (referred) return <span className="text-red-700">Referred</span>
+  if (item.aiIssue) {
+    return (
+      <span className={`rounded px-2 py-0.5 text-xs font-medium ${ISSUE_TONE[item.aiIssue]}`}>
+        {AI_ISSUE_LABEL[item.aiIssue]}
+      </span>
+    )
   }
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {item.status === DRAFT_STATUS.BLOCKED ? (
-        <span className="text-red-700">Blocked</span>
-      ) : (
-        <span className="text-stone-700">Ready for review</span>
-      )}
+      <span className="text-stone-700">Ready for review</span>
       {item.verificationStatus && <VerificationBadge status={item.verificationStatus} />}
     </div>
   )
 }
 
-export default function QueueTable({ items, now }) {
+export default function QueueTable({ items, now, referred = false }) {
   const navigate = useNavigate()
 
   return (
@@ -60,7 +63,7 @@ export default function QueueTable({ items, now }) {
                 <LevelChip level={item.level} />
               </td>
               <td className="px-4 py-3">
-                <StatusCell item={item} />
+                <StatusCell item={item} referred={referred} />
               </td>
               <td className="px-4 py-3 whitespace-nowrap text-stone-600" title={fullDate(item.createdAt)}>
                 {timeAgo(item.createdAt, now)}
