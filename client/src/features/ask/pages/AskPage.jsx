@@ -1,4 +1,6 @@
 import { useNavigate } from 'react-router'
+import { addMyQuestion } from '../../../services/session.js'
+import MyQuestionsList from '../../my-questions/components/MyQuestionsList.jsx'
 import QuestionForm from '../components/QuestionForm.jsx'
 import { useSubmitQuestion } from '../hooks/useSubmitQuestion.js'
 
@@ -26,24 +28,30 @@ export default function AskPage() {
             error={submit.error}
             onSubmit={(question) =>
               submit.mutate(question, {
-                onSuccess: ({ id }) => navigate(`/questions/${id}`, { state: { justSubmitted: true } }),
+                onSuccess: ({ id }) => {
+                  addMyQuestion({ id, text: question.text })
+                  navigate(`/questions/${id}`, { state: { justSubmitted: true } })
+                },
               })
             }
           />
         </div>
       </section>
 
-      <aside className="rounded-lg border border-stone-200 bg-white p-5 lg:col-span-2">
-        <h2 className="font-semibold">How it works</h2>
-        <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-stone-700">
-          {STEPS.map((step) => (
-            <li key={step}>{step}</li>
-          ))}
-        </ol>
-        <p className="mt-4 text-sm text-stone-600">
-          Bayyinah answers general questions. Requests for a personal religious ruling (fatwa) are
-          referred to a scholar.
-        </p>
+      <aside className="space-y-4 lg:col-span-2">
+        <MyQuestionsList />
+        <section className="rounded-lg border border-stone-200 bg-white p-5">
+          <h2 className="font-semibold">How it works</h2>
+          <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-stone-700">
+            {STEPS.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+          <p className="mt-4 text-sm text-stone-600">
+            Bayyinah answers general questions. Requests for a personal religious ruling (fatwa) are
+            referred to a scholar.
+          </p>
+        </section>
       </aside>
     </div>
   )

@@ -43,6 +43,63 @@ export function getSessionId() {
   return id
 }
 
+// ---------------------------------------------------------------------------
+// "My questions": ids of questions asked from this session. Stored with the
+// session id, so the list never outlives the session that can open them.
+
+const MY_QUESTIONS_KEY = 'bayyinah.myQuestions'
+const MY_QUESTIONS_LIMIT = 20
+const CHANGE_EVENT = 'bayyinah:my-questions'
+const EMPTY = Object.freeze([])
+
+let cachedRaw
+let cachedList = EMPTY
+
+/** @returns {ReadonlyArray<{ id: string, text: string, askedAt: string }>} newest first; stable reference until it changes */
+export function getMyQuestions() {
+  const raw = read(MY_QUESTIONS_KEY)
+  const sessionId = read(SESSION_KEY)
+  const cacheKey = `${sessionId}|${raw}`
+  if (cacheKey === cachedRaw) return cachedList
+  cachedRaw = cacheKey
+  try {
+    const stored = raw ? JSON.parse(raw) : null
+    cachedList = stored && stored.sessionId === sessionId && Array.isArray(stored.items) ? stored.items : EMPTY
+  } catch {
+    cachedList = EMPTY
+  }
+  return cachedList
+}
+
+export function addMyQuestion({ id, text }) {
+  const items = [
+    { id, text, askedAt: new Date().toISOString() },
+    ...getMyQuestions().filter((item) => item.id !== id),
+  ].slice(0, MY_QUESTIONS_LIMIT)
+  write(MY_QUESTIONS_KEY, JSON.stringify({ sessionId: getSessionId(), items }))
+  window.dispatchEvent(new Event(CHANGE_EVENT))
+}
+
+/** For useSyncExternalStore; also fires when another tab changes storage. */
+export function subscribeMyQuestions(onChange) {
+  window.addEventListener(CHANGE_EVENT, onChange)
+  window.addEventListener('storage', onChange)
+  return () => {
+    window.removeEventListener(CHANGE_EVENT, onChange)
+    window.removeEventListener('storage', onChange)
+  }
+}
+
+/**
+ * Forgets this questioner: drops the session id (a new one is created on the
+ * next request) and the "My questions" list with it.
+ */
+export function clearSession() {
+  write(SESSION_KEY, null)
+  write(MY_QUESTIONS_KEY, null)
+  window.dispatchEvent(new Event(CHANGE_EVENT))
+}
+
 /** @returns {{ token: string, user: { id, displayName, role } } | null} */
 export function getAuth() {
   const raw = read(AUTH_KEY)

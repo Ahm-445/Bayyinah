@@ -25,7 +25,8 @@ export default function QueuePage() {
           const now = query.dataUpdatedAt
           return (
             <>
-              <StatsBar stats={dashboard.stats} />
+              {/* Pending is counted from the same split as the list below, so they always match. */}
+              <StatsBar stats={{ ...dashboard.stats, pending: pending.length }} />
 
               <section className="space-y-2">
                 <h2 className="font-semibold">

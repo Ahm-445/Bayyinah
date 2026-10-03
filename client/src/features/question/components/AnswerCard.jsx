@@ -1,6 +1,6 @@
 import EvidenceCard from '../../../shared/components/EvidenceCard.jsx'
-import VerificationBadge from '../../../shared/components/VerificationBadge.jsx'
 import { fullDate, timeAgo } from '../../../shared/lib/format.js'
+import { textDirProps } from '../../../shared/lib/text.js'
 
 function Sources({ citations }) {
   if (!citations.length) return null
@@ -16,8 +16,7 @@ function Sources({ citations }) {
           {citations.map((c) => (
             <li
               key={c.key}
-              lang="ar"
-              dir="rtl"
+              {...textDirProps(c.reference ?? c.chunkId)}
               className="rounded bg-stone-100 px-2 py-0.5 text-sm text-stone-700"
             >
               {c.reference ?? c.chunkId}
@@ -41,9 +40,12 @@ export default function AnswerCard({ answer, index, selected, canSelect, onSelec
           <h3 className="font-semibold">Answer {index + 1}</h3>
           <p className="text-sm text-stone-600">by {answer.daee.displayName}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <VerificationBadge status={answer.verificationStatus} />
-          <span className="text-xs text-stone-500">
+        {/* Questioners never see AI verification status; every published answer was reviewed. */}
+        <div className="flex items-center gap-2 text-xs">
+          <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 font-medium text-emerald-800 ring-1 ring-emerald-600/20 ring-inset">
+            Reviewed by a dāʿī
+          </span>
+          <span className="text-stone-500">
             {answer.sourceCount} source{answer.sourceCount === 1 ? '' : 's'}
           </span>
         </div>
@@ -59,7 +61,7 @@ export default function AnswerCard({ answer, index, selected, canSelect, onSelec
 
       <footer className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-3">
         <span className="text-xs text-stone-500" title={fullDate(answer.publishedAt)}>
-          {answer.aiAssisted ? 'Prepared with AI assistance, approved by a dāʿī' : 'Written by a dāʿī'}
+          {answer.aiAssisted ? 'Prepared with AI assistance' : 'Written by a dāʿī'}
           {answer.publishedAt && ` · ${timeAgo(answer.publishedAt)}`}
         </span>
         {selected ? (

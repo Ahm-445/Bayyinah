@@ -1,8 +1,10 @@
 import { Link } from 'react-router'
+import { clearSession } from '../../services/session.js'
 
 async function resetMocks() {
   const { resetMockData } = await import('../../services/mocks/adapter.js')
   resetMockData()
+  clearSession() // the reset deletes the questions "My questions" points to
   window.location.reload()
 }
 
