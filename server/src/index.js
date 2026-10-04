@@ -1,35 +1,42 @@
 const env = require("./config/env");
 const { connectDB, disconnectDB } = require("./config/db");
-const app = require("./app");
+const { createApp } = require("./app");
 
 async function start() {
   try {
+    env.assertValid();
     await connectDB();
   } catch (error) {
-    console.error("MongoDB connection failed:", error.message);
+    console.error("Startup failed:", error.message);
     process.exit(1);
   }
 
+  const app = createApp();
+  const { processor, aiService } = app.locals;
+
+  const stale = await processor.recoverStuck();
+  if (stale > 0) console.warn(`Marked ${stale} unfinished question(s) as failed`);
+
   const server = app.listen(env.port, () => {
-    console.log(`Bayyinah API listening on port ${env.port}`);
+    console.log(`Bayyinah API listening on port ${env.port} (AI: ${aiService.mode})`);
   });
 
+  let closing = false;
+
   async function shutdown(signal) {
+    if (closing) return;
+    closing = true;
     console.log(`${signal} received, shutting down`);
 
     server.close(async () => {
-      try {
-        await disconnectDB();
-        // Loaded lazily: only closes the AI connection if it was opened.
-        await require("./modules/ai").closeAI();
-      } finally {
-        process.exit(0);
-      }
+      await Promise.allSettled([processor.idle(), aiService.close()]);
+      await disconnectDB();
+      process.exit(0);
     });
   }
 
-  process.on("SIGINT", () => shutdown("SIGINT"));
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.once("SIGINT", () => shutdown("SIGINT"));
+  process.once("SIGTERM", () => shutdown("SIGTERM"));
 }
 
 start();

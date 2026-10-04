@@ -2,22 +2,41 @@ const express = require("express");
 const cors = require("cors");
 
 const env = require("./config/env");
-const routes = require("./routes");
+const { createRoutes } = require("./routes");
+const { createAIService } = require("./services/aiService");
+const { createQuestionProcessor } = require("./services/questionProcessor");
 const {
   notFound,
   errorHandler,
 } = require("./middleware/errorHandler");
 
-// The app is created separately from index.js so tests can
-// import it without opening a port or a database connection.
-const app = express();
+/**
+ * Builds the Express app. Dependencies can be injected (tests pass a fake
+ * AI service), and importing this file never opens a port or a database.
+ */
+function createApp({
+  aiService = createAIService(),
+  processor = createQuestionProcessor({ aiService }),
+} = {}) {
+  const app = express();
 
-app.use(cors({ origin: env.clientOrigin }));
-app.use(express.json({ limit: "1mb" }));
+  app.disable("x-powered-by");
+  app.use(
+    cors({
+      origin: env.clientOrigins.length === 1 ? env.clientOrigins[0] : env.clientOrigins,
+    })
+  );
+  app.use(express.json({ limit: "100kb" }));
 
-app.use("/api", routes);
+  app.use("/api", createRoutes({ processor, aiService }));
 
-app.use(notFound);
-app.use(errorHandler);
+  app.use(notFound);
+  app.use(errorHandler);
 
-module.exports = app;
+  app.locals.processor = processor;
+  app.locals.aiService = aiService;
+
+  return app;
+}
+
+module.exports = { createApp };

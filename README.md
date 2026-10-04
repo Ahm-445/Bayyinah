@@ -31,3 +31,16 @@ Question
 - MongoDB
 - RAG
 - LLM
+
+## Running the backend
+
+```bash
+cd server
+npm install
+cp ../.env.example .env   # fill in MONGODB_URI and JWT_SECRET
+npm run seed              # dāʿī/admin accounts and the source registry
+npm run dev               # http://localhost:5000/api/health
+npm test                  # integration tests (throw-away database "bayyinah_test")
+```
+
+Without OpenAI/Voyage keys the server starts in `AI_MODE=mock` (canned, clearly labelled results), so the frontend can be developed without them. See [docs/api.md](docs/api.md) for the full API, the AI contract and data ownership.

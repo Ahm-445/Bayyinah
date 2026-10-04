@@ -9,7 +9,10 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "seed": "node ../scripts/seed-db.js",
+    "test:backend": "node --test tests/api.test.js",
+    "test:ai": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run test:backend"
   },
   "keywords": [],
   "author": "",
@@ -20,8 +23,10 @@
     "cors": "^2.8.6",
     "dotenv": "^18.0.5",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.7.0",
-    "mongoose": "^9.10.3"
+    "mongoose": "^9.10.3",
+    "openai": "^7.27.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
