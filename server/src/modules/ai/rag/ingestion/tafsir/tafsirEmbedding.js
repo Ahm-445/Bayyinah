@@ -11,7 +11,7 @@ const {
 
 const {
   createVoyageEmbeddingProvider,
-} = require("../../embeddings/voyageEmbeddingProvider");
+} = require("../../../providers/voyageEmbeddingProvider");
 
 const FILE_PATH = path.resolve(
   __dirname,

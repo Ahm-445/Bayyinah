@@ -10,6 +10,10 @@ const {
   createDraft,
 } = require("../contracts/draftContract");
 
+const {
+  buildCitations,
+} = require("../rag/citation/citationBuilder");
+
 /**
  * Creates a draft generator.
  *
@@ -54,14 +58,7 @@ function createDraftGenerator({
       temperature: 0.2,
     });
 
-    const citations = evidence.map((item) => ({
-      sourceId: item.sourceId,
-      chunkId: item.chunkId,
-      sourceTitle:
-        item.citation?.sourceTitle || null,
-      reference:
-        item.citation?.reference || null,
-    }));
+    const citations = buildCitations(evidence);
 
     return createDraft({
       answer,

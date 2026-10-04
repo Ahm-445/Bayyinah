@@ -64,6 +64,7 @@ function createVectorRetriever({
         citation: {
           sourceId: item.sourceId,
           chunkId: item.chunkId,
+          sourceTitle: item.metadata?.title || null,
           reference: item.metadata?.reference || null,
         },
       })
