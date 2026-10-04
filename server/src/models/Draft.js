@@ -2,25 +2,67 @@ const mongoose = require("mongoose");
 
 const { Schema } = mongoose;
 
-const draftSchema = new Schema({
-  questionId: { type: String, required: true, index: true },
-  questionText: { type: String, required: true, maxlength: 2000 },
-  action: { type: String, required: true, enum: ["ANSWER", "CLARIFY", "ABSTAIN", "REFER"] },
-  aiAction: { type: String, required: true, enum: ["ANSWER", "CLARIFY", "ABSTAIN", "REFER"] },
-  classification: { type: Schema.Types.Mixed, required: true },
-  safety: { type: Schema.Types.Mixed, required: true },
-  evidence: { type: [Schema.Types.Mixed], default: [] },
-  draft: { type: Schema.Types.Mixed, default: null },
-  verification: { type: Schema.Types.Mixed, default: null },
-  status: {
-    type: String,
-    enum: ["pending_review", "published", "rejected", "reviewed"],
-    default: "pending_review",
-    index: true,
+const versionSchema = new Schema(
+  {
+    text: { type: String, required: true },
+    editedAt: { type: Date, default: Date.now },
+    editedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
-  reviewedAt: { type: Date, default: null },
-  publishedAt: { type: Date, default: null },
-  warningsAcknowledged: { type: Boolean, default: false },
-}, { timestamps: { createdAt: true, updatedAt: true } });
+  { _id: false }
+);
 
-module.exports = mongoose.models.Draft || mongoose.model("Draft", draftSchema);
+// One draft per dāʿī per question. It holds a frozen snapshot of the AI
+// result, so a published answer stays traceable even if chunks are re-ingested.
+const draftSchema = new Schema(
+  {
+    questionId: {
+      type: Schema.Types.ObjectId,
+      ref: "Question",
+      required: true,
+      index: true,
+    },
+    daeeId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+    // The AI never blocks the dāʿī, so `blocked` is not produced any more.
+    status: {
+      type: String,
+      enum: ["in_review", "approved", "rejected", "blocked"],
+      default: "in_review",
+      index: true,
+    },
+    question: {
+      text: { type: String, required: true },
+      language: { type: String, default: "en" },
+    },
+    classification: { type: Schema.Types.Mixed, default: null },
+    action: { type: String, enum: ["ANSWER", "CLARIFY", "ABSTAIN", "REFER"] },
+    aiAction: {
+      type: String,
+      enum: ["ANSWER", "CLARIFY", "ABSTAIN", "REFER"],
+      required: true,
+    },
+    safety: { type: Schema.Types.Mixed, default: null },
+    aiResult: { type: Schema.Types.Mixed, default: null },
+    clarificationQuestion: { type: String, default: null },
+    generatedText: { type: String, default: null },
+    text: { type: String, default: "" },
+    versions: { type: [versionSchema], default: [] },
+    evidence: { type: [Schema.Types.Mixed], default: [] },
+    citations: { type: [Schema.Types.Mixed], default: [] },
+    verification: { type: Schema.Types.Mixed, default: null },
+    requiresAcknowledgement: { type: Boolean, default: false },
+    pipeline: { type: [Schema.Types.Mixed], default: [] },
+    rejectReason: { type: String },
+    answerId: { type: Schema.Types.ObjectId, ref: "Answer" },
+    closedAt: { type: Date },
+  },
+  { timestamps: true, collection: "app_drafts" }
+);
+
+draftSchema.index({ questionId: 1, daeeId: 1 }, { unique: true });
+
+module.exports = mongoose.model("Draft", draftSchema);

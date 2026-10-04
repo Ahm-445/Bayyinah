@@ -1,0 +1,59 @@
+[
+  {
+    "sourceId": "quranpedia-quran-hafs",
+    "title": "القرآن الكريم - حفص عن عاصم",
+    "domain": "quran",
+    "url": "https://quranpedia.net/",
+    "authorityLevel": "primary",
+    "language": "ar",
+    "version": "2026-09-30",
+    "usageBasis": "Qur'an text listed as an approved reference (quranpedia.net) in the challenge scientific package.",
+    "active": true
+  },
+  {
+    "sourceId": "quran-translation-1947",
+    "title": "Saheeh International English Translation of the Quran",
+    "domain": "translation",
+    "url": "https://quranpedia.net/",
+    "authorityLevel": "translation",
+    "language": "en",
+    "version": "2026-10-02",
+    "usageBasis": "Quranpedia official versioned dump; in-app use permitted under Quranpedia usage policy; attribution required for republished datasets",
+    "active": true
+  },
+  {
+    "sourceId": "quranpedia-tafsir-book-1",
+    "title": "تيسير التفسير",
+    "domain": "tafsir",
+    "url": "https://quranpedia.net/",
+    "author": "إبراهيم القطان",
+    "authorityLevel": "secondary",
+    "language": "ar",
+    "version": "2026-08-10",
+    "license": "Quranpedia dataset usage terms",
+    "usageBasis": "Ownership: the classical works in this data (Quran text, canonical qira'at, classical tafsirs) are the shared heritage of the Muslim ummah. The digitization, structuring, verification, diacritical correction (dabt), linking, and metadata are the work of the Quranpedia.net team, compiled and continuously corrected over years; translations and contemporary works remain the property of their authors and publishers. License: free to use inside apps, websites, and research tools with no attribution required (a link is appreciated). Republishing this data — in full or in part — as a downloadable database/dataset requires crediting Quranpedia.net with a link and stating this dump's version. Content is continuously corrected: keep copies current via /api/v1/changes?since=<version>. Provided as-is, without warranty.",
+    "active": true
+  },
+  {
+    "sourceId": "ahmedbaset-hadith-bukhari",
+    "title": "Sahih al-Bukhari",
+    "domain": "hadith",
+    "url": "https://github.com/AhmedBaset/hadith-json/tree/v1.2.0/db/by_book/the_9_books",
+    "authorityLevel": "primary",
+    "language": "ar-en",
+    "version": "v1.2.0",
+    "usageBasis": "AhmedBaset/hadith-json v1.2.0; data stated by repository as scraped from Sunnah.com; use disclosed in Bayyinah project documentation",
+    "active": true
+  },
+  {
+    "sourceId": "ahmedbaset-hadith-muslim",
+    "title": "Sahih Muslim",
+    "domain": "hadith",
+    "url": "https://github.com/AhmedBaset/hadith-json/tree/v1.2.0/db/by_book/the_9_books",
+    "authorityLevel": "primary",
+    "language": "ar-en",
+    "version": "v1.2.0",
+    "usageBasis": "AhmedBaset/hadith-json v1.2.0; data stated by repository as scraped from Sunnah.com; use disclosed in Bayyinah project documentation",
+    "active": true
+  }
+]

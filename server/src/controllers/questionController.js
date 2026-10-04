@@ -1,152 +1,95 @@
+const Question = require("../models/Question");
+const Answer = require("../models/Answer");
+const Selection = require("../models/Selection");
+const User = require("../models/User");
 const HttpError = require("../utils/httpError");
+const { isObjectId } = require("../utils/ids");
+const { questionView, answerView } = require("../services/serializers");
+const { recordAudit } = require("../services/audit");
 
-const CLIENT_CONTROLLED_AI_FIELDS = new Set([
-  "action", "classification", "risk", "safety", "evidence", "citations",
-  "verification", "model", "prompt", "provider", "draft",
-]);
+const MAX_QUESTION_LENGTH = 2000;
+const LANGUAGES = ["ar", "en"];
 
-function projectAIResult(result) {
-  const safeEvidence = (Array.isArray(result.evidence) ? result.evidence : []).map((item) => {
-    const citation = item.citation || {};
-    return {
-      sourceId: item.sourceId,
-      chunkId: item.chunkId,
-      text: item.text,
-      score: item.score,
-      reference: item.reference ?? citation.reference ?? null,
-      surahNumber: item.surahNumber ?? citation.surahNumber ?? null,
-      ayahNumber: item.ayahNumber ?? citation.ayahNumber ?? null,
-      sourceType: item.sourceType ?? citation.sourceType ?? citation.category ?? null,
-      language: item.language ?? citation.language ?? null,
-      citation: item.citation ? {
-        sourceTitle: citation.sourceTitle,
-        reference: citation.reference,
-        sourceType: citation.sourceType,
-        category: citation.category,
-        language: citation.language,
-        surahNumber: citation.surahNumber,
-        surahName: citation.surahName,
-        ayahNumber: citation.ayahNumber,
-      } : undefined,
-    };
-  });
+/** A question owned by the signed-in questioner; anyone else gets 404. */
+async function findOwnQuestion(req, id) {
+  const question = isObjectId(id) ? await Question.findById(id) : null;
 
-  return {
-    action: result.action,
-    aiAction: result.aiAction || result.action,
-    classification: result.classification,
-    safety: result.safety,
-    evidence: safeEvidence,
-    draft: result.draft,
-    verification: result.verification,
-  };
-}
-
-function isReviewableAIResult(result) {
-  return result?.action === "ANSWER" &&
-    result.safety?.decision !== "BLOCK" &&
-    typeof result.draft?.answer === "string" &&
-    ["PASS", "NEEDS_REVIEW"].includes(result.verification?.status);
-}
-
-function createQuestionController({ QuestionModel, DraftModel, aiService }) {
-  async function answerQuestion(req, res, next) {
-    try {
-      const { questionId } = req.params;
-      if (typeof questionId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(questionId)) {
-        throw new HttpError(400, "Invalid questionId", "invalid_question_id");
-      }
-
-      const body = req.body === undefined ? {} : req.body;
-      if (!body || typeof body !== "object" || Array.isArray(body)) {
-        throw new HttpError(400, "Request body must be a JSON object", "invalid_request");
-      }
-      const keys = Object.keys(body);
-      const controlled = keys.find((key) => CLIENT_CONTROLLED_AI_FIELDS.has(key));
-      if (controlled) {
-        throw new HttpError(400, `Client cannot provide ${controlled}`, "client_ai_override");
-      }
-      const unexpected = keys.find((key) => !["text", "language"].includes(key));
-      if (unexpected) {
-        throw new HttpError(400, `Unexpected request field: ${unexpected}`, "invalid_request");
-      }
-      if (body.text !== undefined && (typeof body.text !== "string" || !body.text.trim() || body.text.trim().length > 2000)) {
-        throw new HttpError(400, "text must contain 1–2000 characters", "invalid_text");
-      }
-      if (body.language !== undefined && !["ar", "en"].includes(body.language)) {
-        throw new HttpError(400, "language must be ar or en", "invalid_language");
-      }
-
-      let question = await QuestionModel.findOne({ questionId });
-      if (!question) {
-        if (body.text === undefined) {
-          throw new HttpError(404, "Question not found; provide text to create it", "question_not_found");
-        }
-        question = await QuestionModel.create({
-          questionId,
-          text: body.text.trim(),
-          ...(body.language ? { language: body.language } : {}),
-          status: "processing",
-        });
-      } else {
-        if (body.text !== undefined && body.text.trim() !== question.text) {
-          throw new HttpError(409, "Question text does not match the stored question", "question_text_conflict");
-        }
-        if (question.status === "processing") {
-          throw new HttpError(409, "Question is already being processed", "question_processing");
-        }
-        question.status = "processing";
-        await question.save();
-      }
-
-      let result;
-      let resultRecord = null;
-      try {
-        result = await aiService.answerQuestion({
-          questionId: question.questionId,
-          text: question.text,
-          ...(body.language || question.language
-            ? { language: body.language || question.language }
-            : {}),
-        });
-
-        resultRecord = await DraftModel.create({
-          questionId: question.questionId,
-          questionText: question.text,
-          action: result.action,
-          aiAction: result.aiAction || result.action,
-          classification: result.classification,
-          safety: result.safety,
-          evidence: Array.isArray(result.evidence) ? result.evidence : [],
-          draft: result.draft ?? null,
-          verification: result.verification ?? null,
-          status: "pending_review",
-        });
-
-        question.aiAction = result.aiAction || result.action;
-        question.latestAIResultId = resultRecord._id;
-        question.status = result.action === "REFER" ? "referred" : "awaiting_review";
-        await question.save();
-      } catch (error) {
-        question.status = "failed";
-        await question.save();
-        throw error;
-      }
-
-      res.status(200).json({
-        questionId: question.questionId,
-        status: question.status,
-        ...projectAIResult(result),
-        draftId: String(resultRecord._id),
-        draftStatus: resultRecord.status,
-        published: false,
-      });
-    } catch (error) {
-      next(error);
-    }
+  if (!question || String(question.ownerId) !== req.user.id) {
+    throw new HttpError(404, "Question not found.");
   }
 
-  return { answerQuestion };
+  return question;
 }
 
-module.exports = { createQuestionController, projectAIResult, isReviewableAIResult };
+function createQuestionController({ processor }) {
+  /** Saves the question and returns at once; the AI runs in the background. */
+  async function create(req, res) {
+    const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
+    const language = req.body?.language ?? "en";
+
+    if (text.length < 1 || text.length > MAX_QUESTION_LENGTH) {
+      throw new HttpError(
+        400,
+        `Question must be between 1 and ${MAX_QUESTION_LENGTH} characters.`
+      );
+    }
+
+    if (!LANGUAGES.includes(language)) {
+      throw new HttpError(400, 'Language must be "ar" or "en".');
+    }
+
+    const question = await Question.create({
+      ownerId: req.user.id,
+      text,
+      language,
+    });
+
+    await recordAudit({
+      actorId: req.user.id,
+      action: "question.create",
+      entityType: "question",
+      entityId: question._id,
+    });
+
+    processor.enqueue(question._id);
+
+    res.status(201).json({ id: String(question._id), status: question.status });
+  }
+
+  async function list(req, res) {
+    const questions = await Question.find({ ownerId: req.user.id })
+      .sort({ createdAt: -1 })
+      .limit(200);
+
+    res.json({ questions: questions.map(questionView) });
+  }
+
+  async function get(req, res) {
+    res.json(questionView(await findOwnQuestion(req, req.params.id)));
+  }
+
+  async function answers(req, res) {
+    const question = await findOwnQuestion(req, req.params.id);
+
+    const [published, selection] = await Promise.all([
+      Answer.find({ questionId: question._id }).sort({ publishedAt: 1 }),
+      Selection.findOne({ questionId: question._id }),
+    ]);
+
+    const daees = await User.find({
+      _id: { $in: published.map((answer) => answer.daeeId) },
+    });
+    const byId = new Map(daees.map((daee) => [String(daee._id), daee]));
+
+    res.json({
+      selectedAnswerId: selection ? String(selection.answerId) : null,
+      answers: published.map((answer) =>
+        answerView(answer, byId.get(String(answer.daeeId)))
+      ),
+    });
+  }
+
+  return { create, list, get, answers };
+}
+
+module.exports = { createQuestionController, findOwnQuestion };
