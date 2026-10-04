@@ -6,22 +6,34 @@ const CLIENT_CONTROLLED_AI_FIELDS = new Set([
 ]);
 
 function projectAIResult(result) {
-  const safeEvidence = (result.evidence || []).map((item) => ({
-    sourceId: item.sourceId,
-    chunkId: item.chunkId,
-    text: item.text,
-    score: item.score,
-    citation: item.citation ? {
-      sourceTitle: item.citation.sourceTitle,
-      reference: item.citation.reference,
-      sourceType: item.citation.sourceType,
-      category: item.citation.category,
-      language: item.citation.language,
-    } : undefined,
-  }));
+  const safeEvidence = (Array.isArray(result.evidence) ? result.evidence : []).map((item) => {
+    const citation = item.citation || {};
+    return {
+      sourceId: item.sourceId,
+      chunkId: item.chunkId,
+      text: item.text,
+      score: item.score,
+      reference: item.reference ?? citation.reference ?? null,
+      surahNumber: item.surahNumber ?? citation.surahNumber ?? null,
+      ayahNumber: item.ayahNumber ?? citation.ayahNumber ?? null,
+      sourceType: item.sourceType ?? citation.sourceType ?? citation.category ?? null,
+      language: item.language ?? citation.language ?? null,
+      citation: item.citation ? {
+        sourceTitle: citation.sourceTitle,
+        reference: citation.reference,
+        sourceType: citation.sourceType,
+        category: citation.category,
+        language: citation.language,
+        surahNumber: citation.surahNumber,
+        surahName: citation.surahName,
+        ayahNumber: citation.ayahNumber,
+      } : undefined,
+    };
+  });
 
   return {
     action: result.action,
+    aiAction: result.aiAction || result.action,
     classification: result.classification,
     safety: result.safety,
     evidence: safeEvidence,
@@ -88,7 +100,7 @@ function createQuestionController({ QuestionModel, DraftModel, aiService }) {
       }
 
       let result;
-      let draftRecord = null;
+      let resultRecord = null;
       try {
         result = await aiService.answerQuestion({
           questionId: question.questionId,
@@ -98,20 +110,21 @@ function createQuestionController({ QuestionModel, DraftModel, aiService }) {
             : {}),
         });
 
-        if (isReviewableAIResult(result)) {
-          draftRecord = await DraftModel.create({
-            questionId: question.questionId,
-            questionText: question.text,
-            action: result.action,
-            classification: result.classification,
-            safety: result.safety,
-            evidence: result.evidence,
-            draft: result.draft,
-            verification: result.verification,
-            status: "pending_review",
-          });
-        }
+        resultRecord = await DraftModel.create({
+          questionId: question.questionId,
+          questionText: question.text,
+          action: result.action,
+          aiAction: result.aiAction || result.action,
+          classification: result.classification,
+          safety: result.safety,
+          evidence: Array.isArray(result.evidence) ? result.evidence : [],
+          draft: result.draft ?? null,
+          verification: result.verification ?? null,
+          status: "pending_review",
+        });
 
+        question.aiAction = result.aiAction || result.action;
+        question.latestAIResultId = resultRecord._id;
         question.status = result.action === "REFER" ? "referred" : "awaiting_review";
         await question.save();
       } catch (error) {
@@ -124,8 +137,8 @@ function createQuestionController({ QuestionModel, DraftModel, aiService }) {
         questionId: question.questionId,
         status: question.status,
         ...projectAIResult(result),
-        ...(draftRecord ? { draftId: String(draftRecord._id) } : {}),
-        draftStatus: draftRecord ? "pending_review" : null,
+        draftId: String(resultRecord._id),
+        draftStatus: resultRecord.status,
         published: false,
       });
     } catch (error) {

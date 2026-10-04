@@ -30,6 +30,8 @@ test("review API loads queue and sends a reviewer decision", async (t) => {
   });
   assert.equal(calls[1].url, "/api/review/drafts/draft-1/decision");
   assert.deepEqual(JSON.parse(calls[1].options.body), { decision: "approve", acknowledgeWarnings: true });
+  await decideDraft({ draftId: "result-2", decision: "dismiss" });
+  assert.deepEqual(JSON.parse(calls[2].options.body), { decision: "dismiss", acknowledgeWarnings: false });
 });
 
 test("published answer API reads the seeker-visible answer only by question ID", async (t) => {

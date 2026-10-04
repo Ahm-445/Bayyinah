@@ -18,15 +18,19 @@ Request JSON accepts only:
 
 `text` is required when creating a question and must contain 1–2000 characters. `language` is optional and must be `ar` or `en`; it is stored as question metadata. The current orchestrator detects answer language from the question text, so this field does not override that behavior. The backend can also process an existing stored question by sending `{}`. A supplied text must match an existing question. Unknown fields and AI-result fields are rejected.
 
-For a new `questionId`, the backend creates the minimum Question record. It returns the orchestrator's actual `action`, `classification`, `safety`, `evidence`, `draft`, and `verification` fields, plus question status, `draftId` when reviewable, `draftStatus`, and `published: false`. An `ANSWER` result is saved as `pending_review` only when it has a draft answer, safety is not `BLOCK`, and verification is `PASS` or `NEEDS_REVIEW`. `ABSTAIN`, `REFER`, `CLARIFY`, blocked, and failed-verification results are not added to the review queue. The seeker response never marks an AI draft as published.
+For a new `questionId`, the backend creates a Question and persists every completed AI result in the review collection. The response retains `action` for compatibility and always adds `aiAction` with one of `ANSWER`, `CLARIFY`, `ABSTAIN`, or `REFER`. It includes `classification`, `safety`, `evidence` (always an array), and `draft` / `verification` when available. Verse-based evidence also exposes `reference`, `surahNumber`, `ayahNumber`, `sourceType`, and `language` at the evidence-item level. The response includes `draftId`, `draftStatus: "pending_review"`, and `published: false` for every completed result. `CLARIFY` is accepted by the result contract but is not currently emitted by the classifier or orchestrator.
+
+Only an `ANSWER` with a draft, non-`BLOCK` safety, and `PASS` or `NEEDS_REVIEW` verification can be approved. Other actions and ineligible answer results remain visible in the Da‘i queue but cannot be published as answers. They can be marked reviewed; that changes their review record to `reviewed` while keeping `published: false`.
+
+Draft generation follows the question's detected language. The generator checks the generated text's dominant Arabic/Latin script and fails closed if it does not match. Quran, translation, and tafsir evidence with surah and ayah metadata receives a readable in-text marker such as `(Al-Ikhlas 112:1)` or `(الإخلاص 112:1)`; verse numbers come from the retrieved evidence. Other sources use their supplied source reference; they are not forced into Quran verse format.
 
 ## `GET /api/review/drafts`
 
-Returns drafts with `draftStatus: "pending_review"` for the Da‘i review screen. Each item includes the question, action, classification, safety, evidence, draft, and verification fields. The response sets `published: false`.
+Returns all AI result records with `draftStatus: "pending_review"` for the Da‘i review screen, including `ABSTAIN`, `REFER`, and future `CLARIFY` outcomes. Each item includes `aiAction`, classification, safety, evidence, draft and verification when available, and `published: false`.
 
 ## `POST /api/review/drafts/:draftId/decision`
 
-Accepts exactly one of these JSON bodies:
+Accepts one of these JSON bodies:
 
 ```json
 { "decision": "reject" }
@@ -36,7 +40,11 @@ Accepts exactly one of these JSON bodies:
 { "decision": "approve", "acknowledgeWarnings": true }
 ```
 
-Only a pending, eligible `ANSWER` can be approved. Warning acknowledgement is required when safety is `REVIEW`, verification is `NEEDS_REVIEW`, or verification includes warnings or risk flags. Approval atomically changes the draft state to `published`; rejection changes it to `rejected`. Repeated decisions are rejected. There is no reviewer identity because authentication and user accounts are not implemented.
+```json
+{ "decision": "dismiss" }
+```
+
+Only a pending, eligible `ANSWER` can be approved. Warning acknowledgement is required when safety is `REVIEW`, verification is `NEEDS_REVIEW`, or verification includes warnings or risk flags. Approval atomically changes the answer state to `published`; rejection changes it to `rejected`. `dismiss` is only for outcomes that cannot be published and changes them to `reviewed`. Repeated decisions are rejected. There is no reviewer identity because authentication and user accounts are not implemented.
 
 ## `GET /api/questions/:questionId/published-answer`
 

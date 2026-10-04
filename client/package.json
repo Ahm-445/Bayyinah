@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "node --test src/lib/api.test.js",
+    "test": "node --test src/lib/api.test.js src/lib/aiResult.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

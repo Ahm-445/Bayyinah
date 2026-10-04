@@ -39,7 +39,7 @@ const evidence = [{
   sourceId: "quranpedia-quran-hafs",
   chunkId: "quran-hafs-112-1",
   text: "قُلْ هُوَ اللَّهُ أَحَدٌ",
-  citation: { sourceType: "quran", language: "ar", reference: "Quran 112:1" },
+  citation: { sourceType: "quran", language: "ar", reference: "Quran 112:1", surahName: "سورة الإخلاص", surahNumber: 112, ayahNumber: 1 },
 }];
 
 test("OpenAI provider uses OPENAI_API_KEY and fails clearly when it is missing", () => {
@@ -76,7 +76,7 @@ test("draft generation sends the expected prompt and preserves the existing draf
   assert.equal(fake.requests[0].max_output_tokens, 1200);
   assert.match(fake.requests[0].input, /What does Tawhid mean\?/);
   assert.match(fake.requests[0].input, /قُلْ هُوَ اللَّهُ أَحَدٌ/);
-  assert.equal(draft.answer, "Tawhid is affirming Allah's oneness.");
+  assert.equal(draft.answer, "Tawhid is affirming Allah's oneness. (Al-Ikhlas 112:1)");
   assert.equal(draft.language, "en");
   assert.equal(draft.citations[0].chunkId, "quran-hafs-112-1");
   assert.deepEqual(provider.getUsage().byTask.draft_generation, {

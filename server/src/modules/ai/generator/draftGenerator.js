@@ -10,7 +10,7 @@ const {
   createDraft,
 } = require("../contracts/draftContract");
 
-const { buildCitations } = require("../rag/citation/citationBuilder");
+const { buildCitations, buildInlineReferences } = require("../rag/citation/citationBuilder");
 
 const ENGLISH_ARABIC_TAFSIR_NOTICE =
   "This is an English explanation of the original Arabic source, not an English source quotation.";
@@ -34,6 +34,36 @@ function preserveEnglishTafsirNotice(answer, language, evidence) {
     /arabic (?:tafsir|source)/i.test(firstSentence) &&
     /not (?:the )?original|not .*quotation|not .*quote/i.test(firstSentence);
   return equivalentNotice ? answer : `${ENGLISH_ARABIC_TAFSIR_NOTICE} ${answer}`;
+}
+
+function assertDraftLanguage(answer, language) {
+  const arabicLetters = (answer.match(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/gu) || []).length;
+  const latinLetters = (answer.match(/[A-Za-z]/gu) || []).length;
+  const matches = language === "ar" ? arabicLetters > latinLetters : latinLetters > arabicLetters;
+  if (!matches) throw new Error("Generated draft does not match the question language");
+}
+
+function addEvidenceReferences(answer, evidence, language) {
+  const verseEvidence = evidence.filter((item) => {
+    const citation = item.citation || {};
+    return ["quran", "tafsir", "translation"].includes(citation.sourceType || citation.category) &&
+      Number.isInteger(citation.surahNumber) && Number.isInteger(citation.ayahNumber);
+  });
+  const knownVerseKeys = new Set(verseEvidence.map(({ citation }) => `${citation.surahNumber}:${citation.ayahNumber}`));
+  const nonVerseLabels = evidence.filter((item) => !verseEvidence.includes(item)).flatMap(({ citation = {} }) => [citation.reference, citation.sourceTitle].filter(Boolean));
+
+  let normalized = answer.replace(/\(([^()]*?\d{1,3}\s*:\s*\d{1,3}[^()]*)\)/gu, (marker) => {
+    if (!knownVerseKeys.size || nonVerseLabels.some((label) => marker.includes(label))) return marker;
+    const match = marker.match(/(\d{1,3})\s*:\s*(\d{1,3})/u);
+    const key = `${Number(match[1])}:${Number(match[2])}`;
+    if (!knownVerseKeys.has(key)) throw new Error("Generated Quran reference is not present in the evidence");
+    const item = verseEvidence.find(({ citation }) => `${citation.surahNumber}:${citation.ayahNumber}` === key);
+    return buildInlineReferences([item], language)[0];
+  }).trim();
+
+  const missingReferences = buildInlineReferences(evidence, language).filter((reference) => !normalized.includes(reference));
+  if (missingReferences.length) normalized = `${normalized} ${missingReferences.join(" ")}`.trim();
+  return normalized;
 }
 
 /**
@@ -82,15 +112,18 @@ function createDraftGenerator({
       taskType: "draft_generation",
     });
 
+    assertDraftLanguage(answer, language);
+
     const answerWithSourceNotice = preserveEnglishTafsirNotice(
       answer,
       language,
       evidence
     );
+    const answerWithReferences = addEvidenceReferences(answerWithSourceNotice, evidence, language);
     const citations = buildCitations(evidence);
 
     return createDraft({
-      answer: answerWithSourceNotice,
+      answer: answerWithReferences,
       language,
       citations,
     });
@@ -105,4 +138,6 @@ module.exports = {
   createDraftGenerator,
   ENGLISH_ARABIC_TAFSIR_NOTICE,
   preserveEnglishTafsirNotice,
+  assertDraftLanguage,
+  addEvidenceReferences,
 };

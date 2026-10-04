@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { decideDraft, getPublishedAnswer, getReviewQueue, submitQuestion } from './lib/api.js'
+import { canPublishAIResult, getAIAction, getOutcome, requiresAcknowledgement } from './lib/aiResult.js'
 import './App.css'
 
 const EXAMPLES = [
@@ -11,55 +12,8 @@ function makeQuestionId() {
   return globalThis.crypto?.randomUUID?.() || `q-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
-function getOutcome(result) {
-  if (!result) return null
-  if (result.safety?.decision === 'BLOCK') {
-    return { tone: 'danger', title: 'This request was blocked', message: 'The safety review did not allow an answer. Nothing was sent for publication.' }
-  }
-  if (result.action === 'REFER') {
-    return { tone: 'warning', title: 'Referred for qualified guidance', message: 'Bayyinah did not prepare a normal answer for this request.' }
-  }
-  if (result.action === 'ABSTAIN') {
-    return { tone: 'warning', title: 'No answer was prepared', message: 'The evidence or verification checks did not support an answer. This result is not in the publication queue.' }
-  }
-  if (result.action === 'CLARIFY') {
-    return { tone: 'warning', title: 'More detail is needed', message: 'Please clarify the question before an answer can be prepared.' }
-  }
-  if (result.action !== 'ANSWER' || result.draftStatus !== 'pending_review' || result.published !== false) {
-    return { tone: 'warning', title: 'No publishable draft is available', message: 'The result has not entered Da‘i review and is not published.' }
-  }
-  if (result.verification?.status === 'FAIL') {
-    return { tone: 'danger', title: 'Verification failed', message: 'This draft cannot be reviewed for publication.' }
-  }
-  return { tone: 'success', title: 'AI draft ready for Da‘i review', message: 'This is a draft only. It has not been published.' }
-}
-
-function requiresAcknowledgement(draft) {
-  return draft.safety?.decision === 'REVIEW' ||
-    draft.verification?.status === 'NEEDS_REVIEW' ||
-    (draft.verification?.warnings || []).length > 0 ||
-    (draft.verification?.riskFlags || []).length > 0
-}
-
 function Badge({ children, tone = 'neutral' }) {
   return <span className={`badge badge-${tone}`}>{children}</span>
-}
-
-function CitationList({ citations = [] }) {
-  if (!citations.length) return <p className="muted">No citations were attached.</p>
-  return (
-    <ul className="citation-list">
-      {citations.map((citation, index) => (
-        <li key={`${citation.sourceId || 'source'}-${citation.chunkId || index}`}>
-          <span className="citation-mark">{String(index + 1).padStart(2, '0')}</span>
-          <span>
-            <strong>{citation.sourceTitle || citation.sourceId || 'Source'}</strong>
-            {citation.reference && <small>{citation.reference}</small>}
-          </span>
-        </li>
-      ))}
-    </ul>
-  )
 }
 
 function ClassificationDetails({ result }) {
@@ -82,7 +36,7 @@ function SeekerResult({ result, questionId, publishedAnswer, onOpenReview }) {
       <div className={`outcome-banner outcome-${outcome.tone}`}>
         <div className="outcome-icon" aria-hidden="true">{outcome.tone === 'success' ? '✓' : '!'}</div>
         <div>
-          <p className="eyebrow">AI result · {result.action}</p>
+          <p className="eyebrow">AI result · {getAIAction(result) || 'Unavailable'}</p>
           <h2>{outcome.title}</h2>
           <p>{outcome.message}</p>
         </div>
@@ -107,8 +61,6 @@ function SeekerResult({ result, questionId, publishedAnswer, onOpenReview }) {
             <Badge tone="warning">Awaiting Da‘i review</Badge>
           </div>
           <p className="draft-answer" dir="auto">{result.draft.answer}</p>
-          <h4>Sources used</h4>
-          <CitationList citations={result.draft.citations} />
           <button className="button button-primary" onClick={onOpenReview}>
             Open Da‘i review <span aria-hidden="true">→</span>
           </button>
@@ -123,7 +75,6 @@ function SeekerResult({ result, questionId, publishedAnswer, onOpenReview }) {
         <div className="published-card">
           <div className="card-heading"><div><p className="eyebrow">Da‘i-approved answer</p><h3>Published after review</h3></div><Badge tone="success">Published</Badge></div>
           <p className="draft-answer" dir="auto">{publishedAnswer.answer.text}</p>
-          <CitationList citations={publishedAnswer.answer.citations} />
         </div>
       )}
     </section>
@@ -134,28 +85,33 @@ function ReviewCard({ item, busy, onDecision }) {
   const [acknowledgeWarnings, setAcknowledgeWarnings] = useState(false)
   const requiresAck = requiresAcknowledgement(item)
   const verification = item.verification || {}
+  const action = getAIAction(item)
+  const canPublish = canPublishAIResult(item)
   return (
     <article className="review-card">
       <div className="review-card-top">
         <div><p className="eyebrow">Question {item.questionId}</p><h3 dir="auto">{item.questionText}</h3></div>
-        <Badge tone="warning">Pending review</Badge>
+        <Badge tone={action === 'ANSWER' ? 'warning' : 'neutral'}>{action || 'AI result'} · Pending review</Badge>
       </div>
       <ClassificationDetails result={item} />
-      <div className="review-answer">
-        <div className="card-heading"><h4>AI draft</h4><Badge tone="danger">Not published</Badge></div>
-        <p className="draft-answer" dir="auto">{item.draft?.answer}</p>
-        <h4>Citations</h4>
-        <CitationList citations={item.draft?.citations} />
-      </div>
+      {item.draft?.answer ? (
+        <div className="review-answer">
+          <div className="card-heading"><h4>AI draft · not published</h4><Badge tone="danger">Published: no</Badge></div>
+          <p className="draft-answer" dir="auto">{item.draft.answer}</p>
+        </div>
+      ) : (
+        <div className="reason-card"><span className="eyebrow">No answer draft</span><p>{item.safety?.reason || `The AI result is ${action || 'unavailable'}; no answer was generated.`}</p></div>
+      )}
       <details className="evidence-details">
         <summary>Review evidence ({item.evidence?.length || 0})</summary>
         <div className="evidence-list">
-          {(item.evidence || []).map((evidence) => (
-            <div className="evidence-item" key={`${evidence.sourceId}-${evidence.chunkId}`}>
-              <div><strong>{evidence.citation?.sourceTitle || evidence.sourceId}</strong><small>{evidence.citation?.reference || evidence.chunkId}</small></div>
+          {(item.evidence || []).map((evidence, index) => (
+            <div className="evidence-item" key={`${evidence.sourceId || 'source'}-${evidence.chunkId || index}`}>
+              <div><strong>{evidence.citation?.sourceTitle || evidence.sourceId || 'Source'}</strong><small>{evidence.reference || evidence.citation?.reference || evidence.chunkId}</small></div>
               <p dir="auto">{evidence.text}</p>
             </div>
           ))}
+          {(!item.evidence || item.evidence.length === 0) && <p className="muted">No evidence was retrieved for this result.</p>}
         </div>
       </details>
       {(requiresAck || verification.unsupportedClaims?.length) && (
@@ -164,7 +120,7 @@ function ReviewCard({ item, busy, onDecision }) {
           {verification.warnings?.map((warning) => <p key={warning}>{warning}</p>)}
           {verification.riskFlags?.map((flag) => <p key={flag}>Risk: {flag}</p>)}
           {verification.unsupportedClaims?.map((claim) => <p key={claim}>{claim}</p>)}
-          {requiresAck && (
+          {requiresAck && canPublish && (
             <label className="acknowledge-control">
               <input type="checkbox" checked={acknowledgeWarnings} onChange={(event) => setAcknowledgeWarnings(event.target.checked)} />
               I reviewed these notes and acknowledge them before publishing.
@@ -173,10 +129,18 @@ function ReviewCard({ item, busy, onDecision }) {
         </div>
       )}
       <div className="review-actions">
-        <button className="button button-quiet" disabled={busy} onClick={() => onDecision(item.draftId, 'reject', false)}>Reject draft</button>
-        <button className="button button-primary" disabled={busy || (requiresAck && !acknowledgeWarnings)} onClick={() => onDecision(item.draftId, 'approve', acknowledgeWarnings)}>
-          {busy ? 'Saving…' : 'Approve and publish'}
-        </button>
+        {canPublish ? (
+          <>
+            <button className="button button-quiet" disabled={busy} onClick={() => onDecision(item.draftId, 'reject', false)}>Reject draft</button>
+            <button className="button button-primary" disabled={busy || (requiresAck && !acknowledgeWarnings)} onClick={() => onDecision(item.draftId, 'approve', acknowledgeWarnings)}>
+              {busy ? 'Saving…' : 'Approve and publish'}
+            </button>
+          </>
+        ) : (
+          <button className="button button-outline" disabled={busy} onClick={() => onDecision(item.draftId, 'dismiss', false)}>
+            {busy ? 'Saving…' : 'Mark result reviewed'}
+          </button>
+        )}
       </div>
     </article>
   )
@@ -241,6 +205,8 @@ function App() {
         setNotice('Approved and published. The seeker can now retrieve the reviewed answer.')
         const published = await getPublishedAnswer(outcome.questionId)
         setPublishedAnswer(published)
+      } else if (outcome.draftStatus === 'reviewed') {
+        setNotice('AI result marked reviewed. No answer was published.')
       } else {
         setNotice('Draft rejected. It remains unpublished.')
       }
@@ -344,7 +310,7 @@ function App() {
             <section className="review-workspace">
               <div className="review-intro"><div><p className="eyebrow">Human decision</p><h3>Da‘i review queue</h3><p>Review the generated text and its source evidence. Approval is the only action that makes an answer available as published.</p></div><button className="button button-outline" onClick={refreshQueue} disabled={queueLoading}>{queueLoading ? 'Refreshing…' : 'Refresh queue'}</button></div>
               {queueLoading && <div className="empty-state">Loading pending drafts…</div>}
-              {!queueLoading && queue.length === 0 && <div className="empty-state"><span className="empty-icon">✓</span><strong>No drafts are waiting</strong><p>Submit a seeker question to create an eligible AI draft for review.</p><button className="button button-outline" onClick={openSeekerView}>Go to seeker view</button></div>}
+              {!queueLoading && queue.length === 0 && <div className="empty-state"><span className="empty-icon">✓</span><strong>No results are waiting</strong><p>Submitted AI results appear here for the Da‘i to review.</p><button className="button button-outline" onClick={openSeekerView}>Go to seeker view</button></div>}
               <div className="review-list">{queue.map((item) => <ReviewCard key={item.draftId} item={item} busy={busyDraftId === item.draftId} onDecision={handleReviewDecision} />)}</div>
               <p className="demo-warning">Demo note: reviewer endpoints are unauthenticated in this hackathon skeleton. Do not expose this demo publicly.</p>
             </section>

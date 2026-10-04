@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { buildCitation } = require("./citationBuilder");
+const { buildCitation, buildInlineReferences } = require("./citationBuilder");
 const { formatEvidence } = require("../../prompts/evidenceFormatter");
 
 const evidence = {
@@ -41,5 +41,15 @@ for (const expected of [
 ]) {
   assert.ok(promptEvidence.includes(expected), `Missing ${expected} from evidence prompt`);
 }
+
+assert.deepStrictEqual(buildInlineReferences([{
+  ...evidence,
+  citation: { sourceType: "quran", surahName: "سورة الإخلاص", surahNumber: 112, ayahNumber: 1 },
+}], "ar"), ["(الإخلاص 112:1)"]);
+assert.deepStrictEqual(buildInlineReferences([{
+  ...evidence,
+  citation: { sourceType: "quran", surahNumber: 112, ayahNumber: 1 },
+}], "en"), ["(Al-Ikhlas 112:1)"]);
+assert.deepStrictEqual(buildInlineReferences([evidence], "en"), ["(Verified Collection, Book 1, hadith 123)"]);
 
 console.log("Citation provenance tests: PASSED");

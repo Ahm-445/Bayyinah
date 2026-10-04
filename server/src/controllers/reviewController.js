@@ -1,5 +1,5 @@
 const HttpError = require("../utils/httpError");
-const { projectAIResult } = require("./questionController");
+const { projectAIResult, isReviewableAIResult } = require("./questionController");
 
 const OBJECT_ID_PATTERN = /^[a-f\d]{24}$/i;
 
@@ -46,8 +46,8 @@ function createReviewController({ DraftModel, QuestionModel }) {
       if (unknown) {
         throw new HttpError(400, `Unexpected request field: ${unknown}`, "invalid_request");
       }
-      if (!["approve", "reject"].includes(body.decision)) {
-        throw new HttpError(400, "decision must be approve or reject", "invalid_decision");
+      if (!["approve", "reject", "dismiss"].includes(body.decision)) {
+        throw new HttpError(400, "decision must be approve, reject, or dismiss", "invalid_decision");
       }
       if (body.acknowledgeWarnings !== undefined && typeof body.acknowledgeWarnings !== "boolean") {
         throw new HttpError(400, "acknowledgeWarnings must be a boolean", "invalid_request");
@@ -57,6 +57,21 @@ function createReviewController({ DraftModel, QuestionModel }) {
       if (!existingDraft) {
         throw new HttpError(404, "Pending draft not found", "draft_not_found");
       }
+      const aiAction = existingDraft.aiAction || existingDraft.action;
+
+      if (body.decision === "dismiss") {
+        if (isReviewableAIResult(existingDraft)) {
+          throw new HttpError(422, "An eligible answer must be approved or rejected", "invalid_review_decision");
+        }
+        const reviewed = await DraftModel.findOneAndUpdate(
+          { _id: draftId, status: "pending_review" },
+          { $set: { status: "reviewed", reviewedAt: new Date(), warningsAcknowledged: false } },
+          { new: true }
+        );
+        if (!reviewed) throw new HttpError(409, "Result has already been reviewed", "draft_already_reviewed");
+        await QuestionModel.updateOne({ questionId: reviewed.questionId }, { $set: { status: "reviewed" } });
+        return res.json({ draftId, aiAction, draftStatus: "reviewed", published: false });
+      }
 
       if (body.decision === "reject") {
         const rejected = await DraftModel.findOneAndUpdate(
@@ -65,15 +80,11 @@ function createReviewController({ DraftModel, QuestionModel }) {
           { new: true }
         );
         if (!rejected) throw new HttpError(409, "Draft has already been reviewed", "draft_already_reviewed");
-        await QuestionModel.updateOne({ questionId: rejected.questionId }, { $set: { status: "awaiting_review" } });
-        return res.json({ draftId, draftStatus: "rejected", published: false });
+        await QuestionModel.updateOne({ questionId: rejected.questionId }, { $set: { status: "reviewed" } });
+        return res.json({ draftId, aiAction, draftStatus: "rejected", published: false });
       }
 
-      if (
-        existingDraft.action !== "ANSWER" ||
-        existingDraft.safety?.decision === "BLOCK" ||
-        !["PASS", "NEEDS_REVIEW"].includes(existingDraft.verification?.status)
-      ) {
+      if (!isReviewableAIResult(existingDraft)) {
         throw new HttpError(422, "This result is not eligible for publication", "publication_blocked");
       }
       if (needsWarningAcknowledgement(existingDraft) && body.acknowledgeWarnings !== true) {
@@ -96,6 +107,7 @@ function createReviewController({ DraftModel, QuestionModel }) {
       return res.json({
         draftId,
         questionId: published.questionId,
+        aiAction,
         draftStatus: "published",
         published: true,
         publishedAt: published.publishedAt,
