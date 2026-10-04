@@ -111,6 +111,18 @@ const CLASSIFIER_RULES = Object.freeze({
         "my divorce",
         "my family",
         "my situation",
+        "في حالتي",
+        "في وضعي",
+        "ماذا افعل",
+        "ما الذي ينبغي لي",
+        "هل يجوز لي",
+        "هل يحل لي",
+        "هل يحرم علي",
+        "زوجتي",
+        "زوجي",
+        "زواجي",
+        "طلاقي",
+        "عائلتي",
     ]),
     sensitiveOrDisputed: Object.freeze([
     "is it haram",
@@ -124,6 +136,14 @@ const CLASSIFIER_RULES = Object.freeze({
     "disputed",
     "ruling on",
     "what is the ruling",
+    "هل هذا حرام",
+    "هل هذا حلال",
+    "ما حكم",
+    "حكم",
+    "اختلف العلماء",
+    "اختلاف العلماء",
+    "خلاف العلماء",
+    "مسألة خلافية",
     ]),
     categoryKeywords: Object.freeze({
     [QUESTION_CATEGORIES.QURAN]: Object.freeze([
@@ -133,6 +153,10 @@ const CLASSIFIER_RULES = Object.freeze({
       "ayah",
       "surah",
       "chapter of the quran",
+      "القران",
+      "سورة",
+      "اية",
+      "آية",
     ]),
 
     [QUESTION_CATEGORIES.HADITH]: Object.freeze([
@@ -141,6 +165,9 @@ const CLASSIFIER_RULES = Object.freeze({
       "sunnah",
       "prophetic tradition",
       "authentic hadith",
+      "حديث",
+      "الحديث",
+      "السنة النبوية",
     ]),
 
     [QUESTION_CATEGORIES.TAFSIR]: Object.freeze([
@@ -149,6 +176,8 @@ const CLASSIFIER_RULES = Object.freeze({
       "meaning of this verse",
       "explanation of this verse",
       "quranic interpretation",
+      "تفسير",
+      "المعنى لهذه الاية",
     ]),
 
     [QUESTION_CATEGORIES.AQEEDAH]: Object.freeze([
@@ -158,6 +187,8 @@ const CLASSIFIER_RULES = Object.freeze({
       "belief in Allah",
       "aqeedah",
       "creed",
+      "التوحيد",
+      "العقيدة",
     ]),
 
     [QUESTION_CATEGORIES.FIQH]: Object.freeze([
@@ -166,8 +197,14 @@ const CLASSIFIER_RULES = Object.freeze({
       "ruling",
       "permissible",
       "impermissible",
+      "يجوز",
+      "الطلاق",
       "halal",
       "haram",
+      "فقه",
+      "حلال",
+      "حرام",
+      "حكم",
     ]),
 
     [QUESTION_CATEGORIES.SEERAH_HISTORY]: Object.freeze([
@@ -195,6 +232,7 @@ const CLASSIFIER_RULES = Object.freeze({
     [QUESTION_CATEGORIES.GENERAL_ISLAM]: Object.freeze([
   "about islam",
   "what is islam",
+  "ما هو الاسلام",
   "why do muslims",
   "why does islam",
   "islam teaches",

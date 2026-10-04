@@ -19,6 +19,7 @@ const {
  * @param {string} input.level
  * @param {string} input.risk
  * @param {string} input.action
+ * @param {string} input.language
  * @param {string[]} [input.reasons]
  * @returns {Object}
  */
@@ -27,6 +28,7 @@ function createClassificationResult({
   level,
   risk,
   action,
+  language,
   reasons = [],
 }) {
   if (!Object.values(QUESTION_CATEGORIES).includes(category)) {
@@ -45,6 +47,10 @@ function createClassificationResult({
     throw new Error(`Invalid AI action: ${action}`);
   }
 
+  if (!["ar", "en"].includes(language)) {
+    throw new Error("language must be ar or en");
+  }
+
   if (!Array.isArray(reasons)) {
     throw new Error("reasons must be an array");
   }
@@ -54,6 +60,7 @@ function createClassificationResult({
     level,
     risk,
     action,
+    language,
     reasons,
   };
 }

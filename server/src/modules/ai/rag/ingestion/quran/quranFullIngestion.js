@@ -44,6 +44,7 @@ async function main() {
 
   const dump = parseQuranpediaDump(DUMP_PATH);
   const ayahs = extractHafsAyahs(dump);
+  const sourceVersion = dump.license.version;
 
   console.log(
     `Loaded ${ayahs.length} ayahs ✅`
@@ -70,7 +71,7 @@ async function main() {
       start + BATCH_SIZE
     );
 
-    const chunks = batch.map(buildQuranChunk);
+    const chunks = batch.map((ayah) => buildQuranChunk(ayah, { sourceVersion }));
 
     console.log(
       `\nEmbedding ${start + 1}-${start + batch.length} / ${ayahs.length}...`

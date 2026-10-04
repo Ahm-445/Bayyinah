@@ -6,6 +6,10 @@ const {
   buildVerificationPrompt,
 } = require("../prompts/verificationPrompt");
 
+const {
+  VERIFICATION_RESPONSE_FORMAT,
+} = require("../providers/openaiLLMProvider");
+
 /**
  * Creates a semantic verification provider.
  *
@@ -50,6 +54,9 @@ function createSemanticVerificationProvider({
     return llm.generate(prompt, {
       model,
       temperature: 0,
+      maxOutputTokens: 700,
+      taskType: "evidence_verification",
+      responseFormat: VERIFICATION_RESPONSE_FORMAT,
     });
   }
 

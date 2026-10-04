@@ -25,6 +25,14 @@ const {
 const {
   handleSafetyDecision,
 } = require("../safety/safetyDecisionHandler");
+const { detectRequiredSourceTypes } = require("../classifier/sourceRequirements");
+
+const SOURCE_TYPE_MATCHERS = Object.freeze({
+  quran: new Set(["quran", "translation"]),
+  hadith: new Set(["hadith"]),
+  tafsir: new Set(["tafsir"]),
+  translation: new Set(["translation"]),
+});
 
 /**
  * Creates the Bayyinah AI orchestrator.
@@ -85,13 +93,13 @@ function createAIOrchestrator({
    * @param {Object} input
    * @param {string} input.questionId
    * @param {string} input.text
-   * @param {string} input.language
+   * @param {string} [input.language] Legacy caller hint; question language is detected from input.text.
    * @returns {Promise<Object>}
    */
   async function processQuestion({
     questionId,
     text,
-    language,
+    retrievalLanguages,
   }) {
     if (!questionId || typeof questionId !== "string") {
       throw new Error("questionId is required");
@@ -99,10 +107,6 @@ function createAIOrchestrator({
 
     if (!text || typeof text !== "string") {
       throw new Error("Question text is required");
-    }
-
-    if (!language || typeof language !== "string") {
-      throw new Error("Question language is required");
     }
 
     // 1. Classification
@@ -115,6 +119,10 @@ function createAIOrchestrator({
 
     const safetyDecision =
       handleSafetyDecision(safety);
+    const explicitRequiredSourceTypes = detectRequiredSourceTypes(text);
+    const requiredSourceTypes = explicitRequiredSourceTypes.length
+      ? explicitRequiredSourceTypes
+      : classification.category === "tafsir" ? ["tafsir"] : [];
 
     // 3. Block unsafe/personal requests
     if (!safetyDecision.shouldGenerate) {
@@ -130,7 +138,43 @@ function createAIOrchestrator({
 
     // 4. Retrieval
     const evidence =
-      await retriever.retrieve(text);
+      await retriever.retrieve(text, {
+        category: classification.category,
+        sourceLanguages: retrievalLanguages || ["ar", "en"],
+        ...(requiredSourceTypes.length
+          ? { requiredSourceTypes }
+          : {}),
+      });
+
+    const insufficientRequiredSources = requiredSourceTypes.filter((requiredType) => {
+      const sourceEvidence = evidence.filter((item) => SOURCE_TYPE_MATCHERS[requiredType]?.has(
+        item.citation?.sourceType || item.citation?.category
+      ));
+      return !checkEvidenceSufficiency(sourceEvidence).sufficient;
+    });
+    if (insufficientRequiredSources.length) {
+      const reason = insufficientRequiredSources.map((type) => {
+        const hasAnyEvidence = evidence.some((item) => SOURCE_TYPE_MATCHERS[type]?.has(
+          item.citation?.sourceType || item.citation?.category
+        ));
+        const typeLabel = type[0].toUpperCase() + type.slice(1);
+        return hasAnyEvidence
+          ? `Required ${typeLabel} evidence is insufficient.`
+          : `Required ${typeLabel} evidence is missing.`;
+      }).join(" ");
+      return createAIResult({
+        action: AI_ACTIONS.ABSTAIN,
+        classification,
+        safety: {
+          ...safety,
+          decision: "REVIEW",
+          reason,
+        },
+        evidence,
+        draft: null,
+        verification: null,
+      });
+    }
 
     // 5. Evidence sufficiency
     const evidenceCheck =
@@ -153,12 +197,23 @@ function createAIOrchestrator({
     }
 
     // 6. Generate draft
-    const draft =
-      await draftGenerator.generateDraft({
+    let draft;
+    try {
+      draft = await draftGenerator.generateDraft({
         question: text,
-        language,
+        language: classification.language,
         evidence,
       });
+    } catch (_error) {
+      return createAIResult({
+        action: AI_ACTIONS.ABSTAIN,
+        classification,
+        safety: { ...safety, decision: "REVIEW", reason: "Answer generation failed; review is required." },
+        evidence,
+        draft: null,
+        verification: null,
+      });
+    }
 
     // 7. Citation verification
     const citationVerification =
@@ -181,12 +236,23 @@ function createAIOrchestrator({
     }
 
     // 8. Semantic evidence verification
-    const evidenceVerification =
-      await evidenceVerifier.verify({
+    let evidenceVerification;
+    try {
+      evidenceVerification = await evidenceVerifier.verify({
         question: text,
         draft,
         evidence,
       });
+    } catch (_error) {
+      return createAIResult({
+        action: AI_ACTIONS.ABSTAIN,
+        classification,
+        safety: { ...safety, decision: "REVIEW", reason: "Evidence verification failed; review is required." },
+        evidence,
+        draft,
+        verification: null,
+      });
+    }
 
     const verification = combineVerificationResults({
   	citationVerification,

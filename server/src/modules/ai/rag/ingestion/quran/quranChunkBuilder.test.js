@@ -69,5 +69,10 @@ const chunks = buildQuranChunks([ayah]);
 assert.strictEqual(chunks.length, 1);
 assert.deepStrictEqual(chunks[0], chunk);
 
+const versionedChunk = buildQuranChunk(ayah, {
+  sourceVersion: "2026-10-01",
+});
+assert.strictEqual(versionedChunk.metadata.sourceVersion, "2026-10-01");
+
 console.log("Quran chunk builder test: PASSED");
 console.log(chunk);

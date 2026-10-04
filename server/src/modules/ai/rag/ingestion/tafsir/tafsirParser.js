@@ -1,109 +1,107 @@
 const fs = require("fs");
 const zlib = require("zlib");
 
-function stripHtml(text) {
-  if (typeof text !== "string") {
-    throw new Error("Tafsir text must be a string");
-  }
+const EXPECTED_AYAH_COUNT = 6236;
 
-  return text
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/&amp;/gi, "&")
-    .replace(/\r/g, "")
+function decodeHtmlEntities(value) {
+  const namedEntities = { amp: "&", apos: "'", gt: ">", lt: "<", nbsp: " ", quot: '"' };
+  return value.replace(/&(#x[\da-f]+|#\d+|[a-z]+);/gi, (entity, code) => {
+    if (code[0] === "#") {
+      const hex = code[1]?.toLowerCase() === "x";
+      const point = Number.parseInt(code.slice(hex ? 2 : 1), hex ? 16 : 10);
+      return Number.isFinite(point) && point <= 0x10ffff ? String.fromCodePoint(point) : entity;
+    }
+    return namedEntities[code.toLowerCase()] ?? entity;
+  });
+}
+
+function htmlToText(value) {
+  return decodeHtmlEntities(value)
+    .replace(/<br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/(p|div|li)\s*>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[\t ]+/g, " ").trim())
+    .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
-function parseTafsirDump(filePath) {
-  if (!filePath) {
-    throw new Error("Tafsir dump file path is required");
+function parseTafsirData(data, { expectedAyahCount = EXPECTED_AYAH_COUNT } = {}) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("Tafsir document must be an object");
+  if (!data.license || typeof data.license !== "object" || !data.license.version || !data.license.en) {
+    throw new Error("Tafsir document is missing license usage terms or version");
+  }
+  if (!data.book || Number(data.book.id) !== 1 || !data.book.name || !data.book.author?.full_name) {
+    throw new Error("Expected Quranpedia tafsir book 1 metadata");
+  }
+  if (data.book.language?.code !== "ar") throw new Error(`Expected Arabic tafsir, got ${data.book.language?.code}`);
+  if (!Array.isArray(data.ayahs) || data.ayahs.length !== expectedAyahCount) {
+    throw new Error(`Expected ${expectedAyahCount} ayah rows, got ${data.ayahs?.length ?? 0}`);
   }
 
-  const raw = zlib
-    .gunzipSync(fs.readFileSync(filePath))
-    .toString("utf8");
+  const globalReferences = new Map();
+  const rowsSeen = new Set();
+  data.ayahs.forEach((row, index) => {
+    const surahNumber = Number(row?.surah);
+    const ayahNumber = Number(row?.ayah);
+    if (!Number.isInteger(surahNumber) || surahNumber < 1 || surahNumber > 114 || !Number.isInteger(ayahNumber) || ayahNumber < 1) {
+      throw new Error(`Invalid Quran reference at tafsir row ${index + 1}`);
+    }
+    const key = `${surahNumber}:${ayahNumber}`;
+    if (rowsSeen.has(key)) throw new Error(`Duplicate tafsir ayah row ${key}`);
+    rowsSeen.add(key);
+    globalReferences.set(index + 1, { surahNumber, ayahNumber });
+    if (!Array.isArray(row.content)) throw new Error(`Tafsir content must be an array at ${key}`);
+  });
 
-  const dump = JSON.parse(raw);
-
-  if (!dump.license || !dump.license.source) {
-    throw new Error(
-      "Invalid tafsir dump: license metadata is missing"
-    );
+  const blocks = new Map();
+  for (const [rowIndex, row] of data.ayahs.entries()) {
+    for (const block of row.content) {
+      if (!block || typeof block.text !== "string" || !block.text.trim()) throw new Error(`Empty tafsir block at ${row.surah}:${row.ayah}`);
+      const part = Number(block.part);
+      const pageNumber = Number(block.page);
+      if (!Number.isInteger(part) || part < 1 || !Number.isInteger(pageNumber) || pageNumber < 1) {
+        throw new Error(`Invalid tafsir part/page at ${row.surah}:${row.ayah}`);
+      }
+      const globalAyahNumbers = String(block.ayahs ?? "").split(",").map((value) => Number(value.trim()));
+      if (!globalAyahNumbers.length || globalAyahNumbers.some((number) => !Number.isInteger(number) || !globalReferences.has(number))) {
+        throw new Error(`Invalid global ayah references in tafsir block at ${row.surah}:${row.ayah}`);
+      }
+      const references = globalAyahNumbers.map((number) => globalReferences.get(number));
+      const text = htmlToText(block.text);
+      if (!text) throw new Error(`Tafsir block contains no readable text at ${row.surah}:${row.ayah}`);
+      const key = JSON.stringify([part, pageNumber, globalAyahNumbers, text]);
+      if (!blocks.has(key)) {
+        blocks.set(key, {
+          part,
+          pageNumber,
+          globalAyahNumbers,
+          references,
+          text,
+        });
+      }
+    }
   }
 
-  if (!dump.book || !dump.book.id) {
-    throw new Error(
-      "Invalid tafsir dump: book metadata is missing"
-    );
-  }
-
-  if (!Array.isArray(dump.ayahs)) {
-    throw new Error(
-      "Invalid tafsir dump: ayahs is missing"
-    );
-  }
-
-  return dump;
+  return {
+    license: data.license,
+    book: data.book,
+    ayahRows: data.ayahs.length,
+    blocks: [...blocks.values()],
+  };
 }
 
-function extractTafsirAyahs(dump) {
-  const result = [];
-
-  for (const ayah of dump.ayahs) {
-    if (
-      !Number.isInteger(ayah.surah) ||
-      ayah.surah < 1 ||
-      ayah.surah > 114
-    ) {
-      throw new Error(
-        `Invalid surah number: ${ayah.surah}`
-      );
-    }
-
-    if (
-      !Number.isInteger(ayah.ayah) ||
-      ayah.ayah < 1
-    ) {
-      throw new Error(
-        `Invalid ayah number: ${ayah.ayah}`
-      );
-    }
-
-    if (!Array.isArray(ayah.content)) {
-      throw new Error(
-        `Missing content for ${ayah.surah}:${ayah.ayah}`
-      );
-    }
-
-    const text = ayah.content
-      .map((item) => stripHtml(item.text))
-      .filter(Boolean)
-      .join("\n\n")
-      .trim();
-
-    if (!text) {
-      throw new Error(
-        `Empty tafsir for ${ayah.surah}:${ayah.ayah}`
-      );
-    }
-
-    result.push({
-      surahNumber: ayah.surah,
-      ayahNumber: ayah.ayah,
-      text,
-    });
+function parseTafsirFile(filePath, options) {
+  if (!filePath || typeof filePath !== "string") throw new Error("Tafsir dump path is required");
+  let data;
+  try {
+    data = JSON.parse(zlib.gunzipSync(fs.readFileSync(filePath)).toString("utf8"));
+  } catch (error) {
+    throw new Error(`Could not read Quranpedia tafsir gzip JSON: ${error.message}`);
   }
-
-  return result;
+  return parseTafsirData(data, options);
 }
 
-module.exports = {
-  stripHtml,
-  parseTafsirDump,
-  extractTafsirAyahs,
-};
+module.exports = { EXPECTED_AYAH_COUNT, htmlToText, parseTafsirData, parseTafsirFile };

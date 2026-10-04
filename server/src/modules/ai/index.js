@@ -1,127 +1,50 @@
-const {
-  connectMongo,
-  closeMongo,
-} = require("./rag/storage/mongoClient");
+const { connectMongo, closeMongo } = require("./rag/storage/mongoClient");
+const { createConfiguredLLMProvider } = require("./providers/llmProviderFactory");
+const { createVoyageEmbeddingProvider } = require("./providers/voyageEmbeddingProvider");
+const { createRetriever } = require("./rag/retrieval/retriever");
+const { createDraftGenerator } = require("./generator/draftGenerator");
+const { verifyCitations } = require("./verifier/citationVerifier");
+const { createSemanticVerificationProvider } = require("./verifier/semanticVerificationProvider");
+const { createEvidenceVerifierService } = require("./verifier/evidenceVerifierService");
+const { createAIOrchestrator } = require("./orchestrator/aiOrchestrator");
 
-const {
-  createVoyageEmbeddingProvider,
-} = require("./providers/voyageEmbeddingProvider");
+let orchestratorPromise;
 
-const {
-  createGeminiLLMProvider,
-  DEFAULT_MODEL,
-} = require("./providers/geminiLLMProvider");
-
-const {
-  createRetriever,
-} = require("./rag/retrieval/retriever");
-
-const {
-  createDraftGenerator,
-} = require("./generator/draftGenerator");
-
-const {
-  verifyCitations,
-} = require("./verifier/citationVerifier");
-
-const {
-  createSemanticVerificationProvider,
-} = require("./verifier/semanticVerificationProvider");
-
-const {
-  createEvidenceVerifierService,
-} = require("./verifier/evidenceVerifierService");
-
-const {
-  createAIOrchestrator,
-} = require("./orchestrator/aiOrchestrator");
-
-const RETRIEVAL_TOP_K = 3;
-
-let orchestratorPromise = null;
-
-/**
- * Builds the production AI orchestrator.
- *
- * This is the only wiring the Backend needs. It mirrors the
- * composition used in orchestrator/realOrchestrator.test.js.
- *
- * Environment variables are read from process.env, so the caller
- * (the Backend config) must load server/.env first:
- * MONGODB_URI, MONGODB_DB_NAME, GEMINI_API_KEY, VOYAGE_API_KEY,
- * and optionally GEMINI_MODEL.
- *
- * @returns {Promise<Object>}
- */
-async function buildOrchestrator() {
-  const db = await connectMongo();
-
-  const model =
-    process.env.GEMINI_MODEL || DEFAULT_MODEL;
-
-  const embeddingProvider =
-    createVoyageEmbeddingProvider();
-
-  const retriever = createRetriever({
-    db,
-    embeddingProvider,
-    topK: RETRIEVAL_TOP_K,
-  });
-
-  const geminiProvider =
-    createGeminiLLMProvider({ model });
-
-  const draftGenerator = createDraftGenerator({
-    llmProvider: geminiProvider,
-    model,
-  });
-
-  const evidenceVerifier =
-    createEvidenceVerifierService(
-      createSemanticVerificationProvider({
-        llmProvider: geminiProvider,
-        model,
-      })
-    );
-
-  return createAIOrchestrator({
-    retriever,
-    draftGenerator,
-    citationVerifier: { verifyCitations },
-    evidenceVerifier,
-  });
-}
-
-/**
- * Returns the shared AI orchestrator, creating it on first use.
- *
- * Throws if configuration is missing or MongoDB is unreachable.
- * A failed attempt is not cached, so the next call retries.
- *
- * @returns {Promise<{processQuestion: Function}>}
- */
-function getOrchestrator() {
+async function getOrchestrator() {
   if (!orchestratorPromise) {
-    orchestratorPromise = buildOrchestrator().catch(
-      (error) => {
-        orchestratorPromise = null;
-        throw error;
-      }
-    );
+    orchestratorPromise = (async () => {
+      const db = await connectMongo();
+      const llmProvider = createConfiguredLLMProvider();
+      const retriever = createRetriever({
+        db,
+        embeddingProvider: createVoyageEmbeddingProvider(),
+        topK: 3,
+      });
+      const evidenceVerifier = createEvidenceVerifierService(
+        createSemanticVerificationProvider({ llmProvider })
+      );
+      return createAIOrchestrator({
+        retriever,
+        draftGenerator: createDraftGenerator({ llmProvider }),
+        citationVerifier: { verifyCitations },
+        evidenceVerifier,
+      });
+    })().catch((error) => {
+      orchestratorPromise = undefined;
+      throw error;
+    });
   }
-
   return orchestratorPromise;
 }
 
-/**
- * Closes the AI module's MongoDB connection (for shutdown and scripts).
- */
+async function processQuestion(input) {
+  const orchestrator = await getOrchestrator();
+  return orchestrator.processQuestion(input);
+}
+
 async function closeAI() {
-  orchestratorPromise = null;
+  orchestratorPromise = undefined;
   await closeMongo();
 }
 
-module.exports = {
-  getOrchestrator,
-  closeAI,
-};
+module.exports = { processQuestion, closeAI };
