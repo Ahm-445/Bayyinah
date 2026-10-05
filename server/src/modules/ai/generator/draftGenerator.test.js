@@ -209,3 +209,26 @@ test("uncited evidence is appended in the draft's language", async () => {
   const englishDraft = await english.generateDraft({ question: "What is tawhid?", language: "en", evidence: [ikhlas1] });
   assert.match(englishDraft.answer, /\(Al-Ikhlas 112:1\)\.$/u, "cited once, not appended again");
 });
+
+test("the generation prompt forbids Markdown, addressing the reader, closing offers and unsupported summaries", async () => {
+  const { buildGenerationPrompt } = require("../prompts/generationPrompt");
+  for (const language of ["ar", "en"]) {
+    let sentPrompt;
+    const generator = createDraftGenerator({ llmProvider: { async generate(prompt) {
+      sentPrompt = prompt;
+      return language === "ar" ? "إلهكم إله واحد (البقرة 2:163)." : "Your God is one God (Al-Baqarah 2:163).";
+    } } });
+    await generator.generateDraft({ question: language === "ar" ? "ما معنى التوحيد؟" : "What is tawhid?", language, evidence: [tafsirA170] });
+    assert.equal(sentPrompt, buildGenerationPrompt({
+      question: language === "ar" ? "ما معنى التوحيد؟" : "What is tawhid?", language, evidence: [tafsirA170],
+    }));
+    for (const rule of [
+      /Write plain text only\. Do not use Markdown: no \*\*bold\*\*.*no bullet or numbered lists, no headings/u,
+      /Do not address the reader about the evidence.*"The evidence you provided"/u,
+      /Do not end with an offer.*"If you'd like, I can also explain…".*"إذا أحببت، أستطيع…"/u,
+      /Do not add a concluding or summary sentence unless every part of it is directly supported by the evidence/u,
+      /Tafsir evidence may give its verses only as a Reference such as "Quran 2:163"/u,
+      /Reference: Quran 2:163/u,
+    ]) assert.match(sentPrompt, rule);
+  }
+});
