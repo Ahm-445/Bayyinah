@@ -116,7 +116,17 @@ function buildInlineReference(evidence, language = "en") {
     return `(${englishSurahName || `Quran ${citation.surahNumber}`} ${verse})`;
   }
 
-  const parts = [citation.sourceTitle || citation.title, citation.reference].filter((part) => typeof part === "string" && part.trim());
+  const title = citation.sourceTitle || citation.title;
+  const reference = citation.reference;
+  const hasText = (value) => typeof value === "string" && value.trim();
+
+  // Hadith references already start with the collection name
+  // ("Sahih al-Bukhari 7270"); do not repeat it as "(Sahih al-Bukhari, Sahih al-Bukhari 7270)".
+  if (hasText(title) && hasText(reference) && reference.trim().startsWith(title.trim())) {
+    return `(${reference.trim()})`;
+  }
+
+  const parts = [title, reference].filter(hasText);
   return parts.length ? `(${parts.join(", ")})` : null;
 }
 

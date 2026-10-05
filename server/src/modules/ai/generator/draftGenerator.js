@@ -15,6 +15,17 @@ const { buildCitations, buildInlineReferences } = require("../rag/citation/citat
 const ENGLISH_ARABIC_TAFSIR_NOTICE =
   "This is an English explanation of the original Arabic source, not an English source quotation.";
 
+// One retry for drafts that fail validation (see generateDraft).
+const MAX_GENERATION_ATTEMPTS = 2;
+
+/** A generated draft that must not be accepted; asking the model again may help. */
+class DraftValidationError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "DraftValidationError";
+  }
+}
+
 function hasArabicTafsirEvidence(evidence) {
   return evidence.some((item) => {
     const citation = item.citation || {};
@@ -40,7 +51,7 @@ function assertDraftLanguage(answer, language) {
   const arabicLetters = (answer.match(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/gu) || []).length;
   const latinLetters = (answer.match(/[A-Za-z]/gu) || []).length;
   const matches = language === "ar" ? arabicLetters > latinLetters : latinLetters > arabicLetters;
-  if (!matches) throw new Error("Generated draft does not match the question language");
+  if (!matches) throw new DraftValidationError("Generated draft does not match the question language");
 }
 
 function addEvidenceReferences(answer, evidence, language) {
@@ -56,7 +67,7 @@ function addEvidenceReferences(answer, evidence, language) {
     if (!knownVerseKeys.size || nonVerseLabels.some((label) => marker.includes(label))) return marker;
     const match = marker.match(/(\d{1,3})\s*:\s*(\d{1,3})/u);
     const key = `${Number(match[1])}:${Number(match[2])}`;
-    if (!knownVerseKeys.has(key)) throw new Error("Generated Quran reference is not present in the evidence");
+    if (!knownVerseKeys.has(key)) throw new DraftValidationError("Generated Quran reference is not present in the evidence");
     const item = verseEvidence.find(({ citation }) => `${citation.surahNumber}:${citation.ayahNumber}` === key);
     return buildInlineReferences([item], language)[0];
   }).trim();
@@ -105,28 +116,44 @@ function createDraftGenerator({
       evidence,
     });
 
-    const answer = await llm.generate(prompt, {
-      model,
-      temperature: 0.2,
-      maxOutputTokens: 1200,
-      taskType: "draft_generation",
-    });
+    // The model is not deterministic: an occasional draft fails validation
+    // (wrong language, or a verse number that is not in the evidence) while the
+    // next one is fine. Validation stays strict, so an invented reference is
+    // never accepted; we only ask again once before giving up.
+    let lastError;
 
-    assertDraftLanguage(answer, language);
+    for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
+      const answer = await llm.generate(prompt, {
+        model,
+        temperature: 0.2,
+        maxOutputTokens: 1200,
+        taskType: "draft_generation",
+      });
 
-    const answerWithSourceNotice = preserveEnglishTafsirNotice(
-      answer,
-      language,
-      evidence
-    );
-    const answerWithReferences = addEvidenceReferences(answerWithSourceNotice, evidence, language);
-    const citations = buildCitations(evidence);
+      try {
+        assertDraftLanguage(answer, language);
 
-    return createDraft({
-      answer: answerWithReferences,
-      language,
-      citations,
-    });
+        const answerWithSourceNotice = preserveEnglishTafsirNotice(
+          answer,
+          language,
+          evidence
+        );
+        const answerWithReferences = addEvidenceReferences(answerWithSourceNotice, evidence, language);
+        const citations = buildCitations(evidence);
+
+        return createDraft({
+          answer: answerWithReferences,
+          language,
+          citations,
+        });
+      } catch (error) {
+        // Provider and contract errors are not retried.
+        if (!(error instanceof DraftValidationError)) throw error;
+        lastError = error;
+      }
+    }
+
+    throw lastError;
   }
 
   return {
@@ -136,6 +163,8 @@ function createDraftGenerator({
 
 module.exports = {
   createDraftGenerator,
+  DraftValidationError,
+  MAX_GENERATION_ATTEMPTS,
   ENGLISH_ARABIC_TAFSIR_NOTICE,
   preserveEnglishTafsirNotice,
   assertDraftLanguage,

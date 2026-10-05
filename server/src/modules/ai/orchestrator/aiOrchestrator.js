@@ -204,7 +204,9 @@ function createAIOrchestrator({
         language: classification.language,
         evidence,
       });
-    } catch (_error) {
+    } catch (error) {
+      // The result stays generic for the client, but the cause must be visible in the logs.
+      console.error(`[ai] draft generation failed for question ${questionId}: ${error.message}`);
       return createAIResult({
         action: AI_ACTIONS.ABSTAIN,
         classification,

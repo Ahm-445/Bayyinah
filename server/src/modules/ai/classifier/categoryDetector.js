@@ -1,6 +1,6 @@
 const { QUESTION_CATEGORIES } = require("../contracts/aiTypes");
 const { CLASSIFIER_RULES } = require("./classifierRules");
-const { normalizeText } = require("./textNormalizer");
+const { normalizeText, containsIndicator } = require("./textNormalizer");
 const { getCategoryPriority } = require("./categoryPriority");
 const { detectRequiredSourceTypes } = require("./sourceRequirements");
 
@@ -54,7 +54,7 @@ function detectCategory(questionText) {
     let matchCount = 0;
 
     for (const keyword of keywords) {
-      if (normalizedText.includes(keyword.toLowerCase())) {
+      if (containsIndicator(normalizedText, keyword)) {
         matchCount += 1;
       }
     }

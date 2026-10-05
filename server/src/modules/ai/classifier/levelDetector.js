@@ -1,6 +1,6 @@
 const { QUESTION_LEVELS } = require("../contracts/aiTypes");
 const { CLASSIFIER_RULES } = require("./classifierRules");
-const { normalizeText } = require("./textNormalizer");
+const { normalizeText, containsIndicator } = require("./textNormalizer");
 
 /**
  * Detects whether a question appears to be a personal case.
@@ -17,7 +17,7 @@ function hasPersonalCaseIndicators(questionText) {
     CLASSIFIER_RULES.indicators.personalCase;
 
   return indicators.some((indicator) =>
-    normalizedText.includes(indicator.toLowerCase())
+    containsIndicator(normalizedText, indicator)
   );
 }
 
@@ -34,7 +34,7 @@ function hasSensitiveOrDisputedIndicators(questionText) {
     CLASSIFIER_RULES.indicators.sensitiveOrDisputed;
 
   return indicators.some((indicator) =>
-    normalizedText.includes(indicator.toLowerCase())
+    containsIndicator(normalizedText, indicator)
   );
 }
 
