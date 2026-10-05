@@ -158,3 +158,70 @@ test("English explanation label is supported by Arabic tafsir source metadata", 
   });
   assert.equal(result.status, "PASS");
 });
+
+const { combineVerificationResults } = require("./verificationCombiner");
+const prayerEvidence = [
+  { sourceId: "quran", chunkId: "quran-hafs-11-114", text: "وَأَقِمِ الصَّلَاةَ طَرَفَيِ النَّهَارِ وَزُلَفًا مِّنَ اللَّيْلِ", citation: { sourceType: "quran", surahNumber: 11, ayahNumber: 114 } },
+  { sourceId: "hadith", chunkId: "bukhari-528", text: "The five prayers wipe away sins as a river washes away dirt.", citation: { sourceType: "hadith", reference: "Sahih al-Bukhari 528" } },
+];
+const combined = (result) => combineVerificationResults({
+  citationVerification: { citationValid: true, unsupportedClaims: [], missingCitations: [], riskFlags: [], warnings: [] },
+  evidenceVerification: result,
+});
+
+test("one unsupported closing paraphrase in a supported draft needs review instead of failing", async () => {
+  const answer = [
+    "Allah commands prayer at both ends of the day and in part of the night: \"وَأَقِمِ الصَّلَاةَ طَرَفَيِ النَّهَارِ\" (Hud 11:114).",
+    "The Prophet ﷺ compared the five prayers to a river that washes away dirt (Sahih al-Bukhari 528).",
+    "In this way prayer shapes the rhythm of a believer's whole day.",
+  ].join(" ");
+  const { result } = await verifyWith({
+    question: "Why do Muslims pray five times a day?",
+    answer,
+    evidence: prayerEvidence,
+    claims: [
+      record(1, { supportingEvidence: [1] }),
+      record(2, { supportingEvidence: [2] }),
+      record(3, { supported: false, reason: "The evidence does not say this." }),
+    ],
+  });
+  assert.equal(result.status, "NEEDS_REVIEW");
+  assert.equal(result.evidenceSupported, true);
+  assert.deepEqual(result.unsupportedClaims, []);
+  assert.ok(result.warnings.some((warning) => /review before publishing: "In this way prayer shapes/.test(warning)));
+  assert.equal(combined(result).status, "NEEDS_REVIEW");
+});
+
+test("unsupported quotations, citations, attributions, rulings or two unsupported sentences still fail", async () => {
+  const supported = "Allah commands prayer at both ends of the day (Hud 11:114).";
+  for (const bad of [
+    "The verse says \"pray five times\".",                    // quotation
+    "Prayer was made obligatory on the Night Journey (Al-Isra 17:1).", // citation the evidence doesn't support
+    "The Prophet ﷺ said that prayer is the key to Paradise.",   // attribution
+    "قال الله تعالى إن الصلاة تنهى عن كل شيء.",                 // attribution (Arabic)
+    "Muslims must pray even when travelling.",                  // ruling
+  ]) {
+    const { result } = await verifyWith({
+      answer: `${supported} ${bad}`,
+      evidence: prayerEvidence,
+      claims: [record(1, { supportingEvidence: [1] }), record(2, { supported: false, reason: "Not in the evidence." })],
+    });
+    assert.equal(result.status, "FAIL", bad);
+    assert.equal(combined(result).status, "FAIL", bad);
+  }
+
+  const { result: twoUnsupported } = await verifyWith({
+    answer: `${supported} Prayer brings calm. It also builds community.`,
+    evidence: prayerEvidence,
+    claims: [record(1, { supportingEvidence: [1] }), record(2, { supported: false }), record(3, { supported: false })],
+  });
+  assert.equal(twoUnsupported.status, "FAIL");
+  assert.equal(twoUnsupported.unsupportedClaims.length, 2);
+
+  const { result: nothingSupported } = await verifyWith({
+    answer: "Prayer brings calm.",
+    evidence: prayerEvidence,
+    claims: [record(1, { supported: false })],
+  });
+  assert.equal(nothingSupported.status, "FAIL");
+});

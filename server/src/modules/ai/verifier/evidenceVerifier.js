@@ -1,6 +1,7 @@
 const {
   createVerificationResult,
 } = require("../contracts/verificationContract");
+const { determineVerificationStatus } = require("./verificationRules");
 
 /**
  * Creates a normalized evidence verification result.
@@ -49,9 +50,14 @@ function createEvidenceVerification({
   }
 
   return createVerificationResult({
-    status: evidenceSupported
-      ? "PASS"
-      : "FAIL",
+    // FAIL when unsupported, NEEDS_REVIEW when only warnings or risk flags remain.
+    status: determineVerificationStatus({
+      citationValid: true,
+      evidenceSupported,
+      unsupportedClaims,
+      warnings,
+      riskFlags,
+    }),
     citationValid: true,
     evidenceSupported,
     unsupportedClaims,

@@ -1,6 +1,34 @@
 const { evidenceId, organizeEvidenceForVerification } = require("./evidenceOrganizer");
 const { extractDraftSpans } = require("./draftSpanExtractor");
 
+// Quotation marks of any script. The straight apostrophe is left out: it is an
+// ordinary letter in English contractions and transliterations ("Qur'an").
+const QUOTATION = /["“”„«»‹›「」『』]|‘[^’]*’/u;
+// Any parenthetical source reference: "(Al-Baqarah 2:163)", "(Sahih al-Bukhari 7270)".
+const PARENTHETICAL_REFERENCE = /\([^()]*\d[^()]*\)/u;
+// Words attributed to Allah, the Prophet ﷺ, a verse, a hadith or a named source.
+const ATTRIBUTION = new RegExp([
+  "قال\\s+(?:الله|تعالى|رسول|النبي|صلى)", "يقول\\s+(?:الله|تعالى)", "قوله\\s+تعالى",
+  "ﷺ", "صلى الله عليه وسلم", "رواه", "في\\s+الحديث", "حديث", "الآية", "سورة",
+  "\\b(?:allah|god)\\s+(?:says|said|states|tells)", "\\b(?:the\\s+)?prophet\\b.*\\b(?:said|says|taught)",
+  "\\b(?:quran|qur'an|hadith|verse|surah|narrated|reported)\\b",
+].join("|"), "iu");
+// Statements of a religious ruling.
+const RULING = new RegExp([
+  "يجب", "واجب", "فرض", "حرام", "محرم", "يحرم", "حلال", "يجوز", "مباح", "مكروه", "مستحب",
+  "\\b(?:must|obligatory|obligation|forbidden|prohibited|haram|halal|permissible|impermissible|allowed|not\\s+allowed|required|fard|wajib|makruh)\\b",
+].join("|"), "iu");
+
+/**
+ * An unsupported sentence that may be downgraded to a warning: plain
+ * explanatory prose, not a quotation, citation, attribution or ruling.
+ * Anything else that the evidence does not support stays a failure.
+ */
+function isPlainSentence(claim) {
+  return !QUOTATION.test(claim) && !PARENTHETICAL_REFERENCE.test(claim) &&
+    !ATTRIBUTION.test(claim) && !RULING.test(claim);
+}
+
 /**
  * Parses internal claim-level model output and normalizes it to the existing
  * application verification shape.
@@ -38,6 +66,8 @@ function parseVerificationResponse(response, { question, draft, evidence = [] } 
   const claimsBySpan = new Map();
   let invalidExtraction = false;
   let everyClaimSupported = true;
+  let supportedFactualClaims = 0;
+  const unsupported = [];
 
   for (const claimResult of parsed.claims) {
     if (
@@ -86,16 +116,31 @@ function parseVerificationResponse(response, { question, draft, evidence = [] } 
       supported,
       reason: claimResult.reason.trim(),
     });
-    if (!supported) {
-      everyClaimSupported = false;
+    if (supported) {
+      supportedFactualClaims += 1;
+    } else {
       const reason = claimResult.reason.trim() ||
         (claimResult.supported && !referencesAreKnown
           ? "The verifier selected an evidence number that was not supplied for this answer."
           : claimResult.supported
             ? "No supporting evidence was identified for this claim."
             : "The supplied evidence does not support this claim.");
-      unsupportedClaims.push(`Draft claim: "${claim}" — ${reason}`);
+      unsupported.push({ claim, reason, plain: referencesAreKnown && isPlainSentence(claim) });
     }
+  }
+
+  // One unsupported plain sentence (e.g. a closing paraphrase) in an otherwise
+  // supported draft is a warning for the Da'i (NEEDS_REVIEW), not a failure.
+  // Quotations, citations, attributions, rulings, a second unsupported claim,
+  // or a draft with no supported claim at all still fail.
+  const reviewOnly = !invalidExtraction && unsupported.length === 1 &&
+    unsupported[0].plain && supportedFactualClaims > 0;
+  if (reviewOnly) {
+    const [{ claim, reason }] = unsupported;
+    warnings.push(`Unsupported sentence, review before publishing: "${claim}" — ${reason}`);
+  } else if (unsupported.length) {
+    everyClaimSupported = false;
+    for (const { claim, reason } of unsupported) unsupportedClaims.push(`Draft claim: "${claim}" — ${reason}`);
   }
 
   if (invalidExtraction) everyClaimSupported = false;
@@ -111,4 +156,5 @@ function parseVerificationResponse(response, { question, draft, evidence = [] } 
 
 module.exports = {
   parseVerificationResponse,
+  isPlainSentence,
 };
