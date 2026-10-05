@@ -14,9 +14,10 @@ Contents: 1. Conventions · 2. Enums · 3. Endpoints (with real examples) · 4. 
 - **Auth**: `Authorization: Bearer <token>` from login/register (JWT, 7 days). Missing/invalid token → `401`; wrong role → `403`.
 - **Errors**: `{ "error": "message", "code": "optional_machine_code" }`.
   Messages of `4xx` errors are safe to show to the user. In production `5xx` carry a generic message.
-  Codes in use: `username_taken` (409), `already_selected` (409), `warnings_not_acknowledged` (422), `invalid_json` (400), `not_found` (404).
+  Codes in use: `username_taken` (409), `already_selected` (409), `warnings_not_acknowledged` (422), `rate_limited` (429), `invalid_json` (400), `not_found` (404).
 - Someone else's question, answer or draft is always `404`, never `403`, so ids cannot be probed.
-- CORS allows the origins in `CLIENT_ORIGIN` (comma separated).
+- CORS allows the origins in `CLIENT_ORIGIN` (comma separated). `Retry-After` is exposed to the browser.
+- **Rate limits** (every question costs OpenAI/Voyage credit): sign-in 30 per IP per 15 min, account creation 20 per IP per hour, questions 20 per account per hour. Over the limit → `429 { error, code: "rate_limited" }` with a `Retry-After` header (seconds). Reads are not limited. Configurable with `RATE_LOGIN_MAX`, `RATE_REGISTER_MAX`, `RATE_QUESTIONS_MAX`.
 - `POST /questions` returns immediately; the AI runs in the background. **The Frontend polls `GET /questions/:id` every 2–3 s** until `status` is neither `submitted` nor `drafting`.
 
 ## 2. Enums
@@ -55,7 +56,7 @@ Dāʿī and admin accounts are created by the seed script (section 8).
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/questions` | `{ text, language }` – text 1–2000 chars, language `"ar"` or `"en"` (default `en`). → `201 { id, status: "submitted" }` |
+| POST | `/questions` | `{ text, language }` – text 1–2000 chars, language `"ar"` or `"en"` (default `en`). → `201 { id, status: "submitted" }`. `429 rate_limited` after 20 questions per hour. `language` is stored with the question; **the AI detects the language from the text itself**, so a draft is written in the language the question is written in. |
 | GET | `/questions` | → `{ questions: Question[] }`, newest first, own questions only |
 | GET | `/questions/:id` | → `Question`. `404` for anyone but the owner. |
 | GET | `/questions/:id/answers` | → `{ selectedAnswerId, answers: Answer[] }`, oldest first |
@@ -191,7 +192,7 @@ Decided in the Backend (change by PR on this file):
 | Dāʿī accounts | Fixed, created by the seed script. No public sign-up for dāʿīs or admins. |
 | Verification of final text | The AI verifies its own draft only. The dāʿī's edited text is not re-verified; the dāʿī takes responsibility. |
 
-Not implemented: rate limiting on login/register, password reset, `POST /evaluation/run`, enforcing `active: false` inside retrieval. Ahmed's temporary endpoints (`/questions/:id/ai-answer`, `/review/drafts`, `/review/drafts/:id/decision`, `/questions/:id/published-answer`) are **not** part of this API.
+Not implemented: password reset, `POST /evaluation/run`, enforcing `active: false` inside retrieval. Ahmed's temporary endpoints (`/questions/:id/ai-answer`, `/review/drafts`, `/review/drafts/:id/decision`, `/questions/:id/published-answer`) are **not** part of this API.
 
 ## 8. Running it
 

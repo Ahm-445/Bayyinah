@@ -17,18 +17,21 @@ const {
 function createApp({
   aiService = createAIService(),
   processor = createQuestionProcessor({ aiService }),
+  rateLimits = env.rateLimits,
 } = {}) {
   const app = express();
 
   app.disable("x-powered-by");
+  app.set("trust proxy", env.trustProxy);
   app.use(
     cors({
       origin: env.clientOrigins.length === 1 ? env.clientOrigins[0] : env.clientOrigins,
+      exposedHeaders: ["Retry-After"],
     })
   );
   app.use(express.json({ limit: "100kb" }));
 
-  app.use("/api", createRoutes({ processor, aiService }));
+  app.use("/api", createRoutes({ processor, aiService, rateLimits }));
 
   app.use(notFound);
   app.use(errorHandler);

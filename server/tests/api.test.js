@@ -28,6 +28,19 @@ const AuditLog = require("../src/models/AuditLog");
 const PASSWORD = "demo1234";
 const silent = { error() {}, warn() {}, log() {} };
 
+const HOUR = 60 * 60 * 1000;
+// The main test server must never be rate limited; the "rate limiting" suite uses LOW_LIMITS.
+const NO_LIMITS = {
+  loginMax: 1e6, loginWindowMs: HOUR,
+  registerMax: 1e6, registerWindowMs: HOUR,
+  questionMax: 1e6, questionWindowMs: HOUR,
+};
+const LOW_LIMITS = {
+  loginMax: 2, loginWindowMs: HOUR,
+  registerMax: 2, registerWindowMs: HOUR,
+  questionMax: 2, questionWindowMs: HOUR,
+};
+
 describe(
   "Bayyinah API",
   { skip: !env.mongodbUri && "MONGODB_URI is not set" },
@@ -89,7 +102,7 @@ describe(
 
       const aiService = createAIService({ processQuestion: fakeProcessQuestion });
       processor = createQuestionProcessor({ aiService, logger: silent });
-      server = createApp({ aiService, processor }).listen(0);
+      server = createApp({ aiService, processor, rateLimits: NO_LIMITS }).listen(0);
       base = `http://127.0.0.1:${server.address().port}`;
 
       for (const name of ["khalid", "maryam", "admin"]) tokens[name] = await login(name);
@@ -518,6 +531,74 @@ describe(
 
         const off = await api("PATCH", "/sources/quranpedia-quran-hafs", { token: tokens.admin, body: { active: false } });
         assert.equal(off.data.active, false);
+      });
+    });
+
+    describe("rate limiting (protects the paid AI and the sign-in)", () => {
+      let limitedServer;
+      let limitedBase;
+      let limitedProcessor;
+
+      before(() => {
+        const aiService = createAIService({ processQuestion: fakeProcessQuestion });
+        limitedProcessor = createQuestionProcessor({ aiService, logger: silent });
+        limitedServer = createApp({ aiService, processor: limitedProcessor, rateLimits: LOW_LIMITS }).listen(0);
+        limitedBase = `http://127.0.0.1:${limitedServer.address().port}/api`;
+      });
+
+      after(() => limitedServer?.close());
+
+      const call = (path, { token, body } = {}) =>
+        fetch(limitedBase + path, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(body ?? {}),
+        });
+
+      it("limits sign-in attempts per address and says when to retry", async () => {
+        const attempt = () => call("/auth/login", { body: { username: "khalid", password: "wrong-pass" } });
+
+        assert.equal((await attempt()).status, 401);
+        assert.equal((await attempt()).status, 401);
+
+        const blocked = await attempt();
+        assert.equal(blocked.status, 429);
+        assert.equal((await blocked.json()).code, "rate_limited");
+        assert.ok(Number(blocked.headers.get("retry-after")) > 0);
+        assert.equal(blocked.headers.get("ratelimit-remaining"), "0");
+      });
+
+      it("limits account creation per address", async () => {
+        const register = (name) => call("/auth/register", { body: { username: name, password: PASSWORD } });
+
+        assert.equal((await register("rl_user_a")).status, 201);
+        assert.equal((await register("rl_user_b")).status, 201);
+        assert.equal((await register("rl_user_c")).status, 429);
+      });
+
+      it("limits questions per account, so one person cannot spend the AI budget", async () => {
+        const ask = (token) => call("/questions", { token, body: { text: "rate limit test", language: "en" } });
+
+        assert.equal((await ask(tokens.sara)).status, 201);
+        assert.equal((await ask(tokens.sara)).status, 201);
+
+        const blocked = await ask(tokens.sara);
+        assert.equal(blocked.status, 429);
+        assert.equal((await blocked.json()).code, "rate_limited");
+
+        // another account is not affected
+        assert.equal((await ask(tokens.john)).status, 201);
+
+        await limitedProcessor.idle();
+      });
+
+      it("does not count reads", async () => {
+        for (let i = 0; i < 5; i += 1) {
+          assert.equal((await api("GET", "/questions", { token: tokens.sara })).status, 200);
+        }
       });
     });
 

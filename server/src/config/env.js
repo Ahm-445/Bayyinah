@@ -52,6 +52,22 @@ const env = {
   aiMode,
   aiTimeoutMs: Number(process.env.AI_TIMEOUT_MS) || 90000,
   seedPassword: process.env.SEED_PASSWORD,
+  // Behind Render's proxy set TRUST_PROXY=1 so req.ip is the real client
+  // (otherwise everyone shares the proxy's address and the limits below hit all users).
+  trustProxy: process.env.TRUST_PROXY
+    ? Number(process.env.TRUST_PROXY)
+    : isProduction
+      ? 1
+      : false,
+  // Every question costs OpenAI/Voyage credit, so the public demo is limited.
+  rateLimits: {
+    loginMax: Number(process.env.RATE_LOGIN_MAX) || 30, // per IP, 15 minutes
+    loginWindowMs: 15 * 60 * 1000,
+    registerMax: Number(process.env.RATE_REGISTER_MAX) || 20, // per IP, 1 hour
+    registerWindowMs: 60 * 60 * 1000,
+    questionMax: Number(process.env.RATE_QUESTIONS_MAX) || 20, // per account, 1 hour
+    questionWindowMs: 60 * 60 * 1000,
+  },
 };
 
 /** Fails fast on configuration that must never be missing in production. */
