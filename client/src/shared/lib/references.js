@@ -21,14 +21,17 @@ export const SURAH_NAMES = [
   'Al-Masad', 'Al-Ikhlas', 'Al-Falaq', 'An-Nas',
 ]
 
-const QURAN_CHUNK = /^quran-hafs-(\d+)-(\d+)$/
+// "quran-hafs-51-56" and translations like "quran-translation-1947-51-56".
+const QURAN_CHUNK = /^quran-(?:hafs|translation-\d+)-(\d+)-(\d+)$/
 const TAFSIR_CHUNK = /^tafsir-book-1-(\d+)-(\d+)$/
+// Real tafsir chunks carry the verse only in `reference`, e.g. "Quran 2:284–2:285" (first verse wins).
+const QURAN_REFERENCE = /^Quran (\d+):(\d+)/
 
 /** { surah, ayah, tafsir } for verse-based evidence, else null. */
 function verseOf(evidence) {
   const tafsir = evidence.chunkId?.match(TAFSIR_CHUNK)
   if (tafsir) return { surah: Number(tafsir[1]), ayah: Number(tafsir[2]), tafsir: true }
-  const quran = evidence.chunkId?.match(QURAN_CHUNK)
+  const quran = evidence.chunkId?.match(QURAN_CHUNK) ?? evidence.reference?.match(QURAN_REFERENCE)
   const surah = Number(evidence.surahNumber ?? quran?.[1])
   const ayah = Number(evidence.ayahNumber ?? quran?.[2])
   if (!surah || !ayah) return null
