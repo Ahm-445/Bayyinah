@@ -326,6 +326,14 @@ const routes = [
     if (needsAcknowledgement && ctx.body?.acknowledgeWarnings !== true) {
       fail(422, 'Please confirm you have reviewed this answer and take responsibility for it.', 'warnings_not_acknowledged')
     }
+    // approve accepts the final text in the same request (docs/api.md): saved as a version, then published.
+    if (ctx.body?.text !== undefined) {
+      if (typeof ctx.body.text !== 'string' || !ctx.body.text.trim()) fail(400, 'Write the answer before approving.')
+      if (ctx.body.text !== draft.text) {
+        draft.text = ctx.body.text
+        draft.versions.push({ text: ctx.body.text, editedAt: now(), editedBy: ctx.user.id })
+      }
+    }
     if (!draft.text?.trim()) fail(400, 'Write the answer before approving.')
     const user = db.users.find((u) => u.id === draft._daeeId) ?? ctx.user
     // The questioner never sees citations; the dāʿī cites sources in the text.

@@ -1,3 +1,4 @@
+import { stripMarkdown } from '../../shared/lib/markdown.js'
 import { list, mapCitation } from './common.js'
 
 /**
@@ -9,7 +10,8 @@ export function mapAnswer(raw) {
   return {
     id: raw.id,
     daee: { id: raw.daee?.id ?? null, displayName: raw.daee?.displayName ?? 'Dāʿī' },
-    finalText: raw.finalText ?? '',
+    // Defensive: never show Markdown syntax to the questioner.
+    finalText: stripMarkdown(raw.finalText ?? ''),
     citations: list(raw.citations).map(mapCitation),
     publishedAt: raw.publishedAt ?? null,
   }

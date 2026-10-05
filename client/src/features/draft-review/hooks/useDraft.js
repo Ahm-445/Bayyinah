@@ -28,12 +28,9 @@ export function useSaveDraft(id) {
   })
 }
 
-/** Saves unsaved edits first (if any), then approves. */
+/** One call: the final editor text is sent with the approval (docs/api.md). */
 export function useApproveDraft(id) {
-  return useDraftMutation(id, async ({ unsavedText, acknowledgeWarnings }) => {
-    if (unsavedText != null) await updateDraft(id, unsavedText)
-    return approveDraft(id, { acknowledgeWarnings })
-  })
+  return useDraftMutation(id, ({ text, acknowledgeWarnings }) => approveDraft(id, { text, acknowledgeWarnings }))
 }
 
 export function useRejectDraft(id) {

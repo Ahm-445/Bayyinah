@@ -1,4 +1,5 @@
 import { AI_ACTION, AI_ISSUE, DRAFT_STATUS, DRAFT_VIEW } from '../../shared/lib/enums.js'
+import { stripMarkdown } from '../../shared/lib/markdown.js'
 import { list, mapCitation, mapEvidence, mapPipeline, mapVerification } from './common.js'
 
 /** Advisory reason the AI did not give a usable draft, or null. */
@@ -16,7 +17,9 @@ function aiIssueOf(aiAction, generatedText, verification) {
  */
 export function mapDraft(raw) {
   const classification = raw.question?.classification ?? {}
-  const generatedText = raw.generatedText ?? null
+  // The AI sometimes writes Markdown (**bold**, lists): show plain text in the editor,
+  // so it is also what gets published (approve sends the editor text).
+  const generatedText = raw.generatedText ? stripMarkdown(raw.generatedText) : null
   const status = raw.status
   const isClosed = status === DRAFT_STATUS.APPROVED || status === DRAFT_STATUS.REJECTED
   const isReferral = raw.aiAction === AI_ACTION.REFER || classification.level === 'D'
@@ -39,7 +42,7 @@ export function mapDraft(raw) {
     },
     safety: raw.safety ?? null,
     generatedText,
-    text: raw.text ?? generatedText ?? '',
+    text: raw.text ? stripMarkdown(raw.text) : (generatedText ?? ''),
     versions: list(raw.versions),
     evidence: list(raw.evidence).map(mapEvidence),
     citations: list(raw.citations).map(mapCitation),

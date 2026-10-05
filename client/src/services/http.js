@@ -1,5 +1,5 @@
 import { config } from './config.js'
-import { ApiError } from './errors.js'
+import { ApiError, parseRetryAfter } from './errors.js'
 import { clearAuth, getAuth } from './session.js'
 
 /** Real backend transport. */
@@ -28,6 +28,8 @@ export async function httpRequest(method, path, { body } = {}) {
       response.status,
       data?.error || response.statusText || 'Request failed',
       data?.code ?? null,
+      // Exposed by the backend's CORS config (docs/api.md 1).
+      response.status === 429 ? parseRetryAfter(response.headers.get('Retry-After')) : null,
     )
   }
 
