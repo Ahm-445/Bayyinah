@@ -1,19 +1,22 @@
+import { needsAcknowledgement } from '../policy.js'
 import { EVIDENCE as E, citationsFor, weak } from './evidence.js'
 
 // Raw backend shapes (docs/api.md). Fields starting with "_" are mock-internal
 // bookkeeping and are stripped before a response leaves the adapter.
 //
-// Draft scenarios for usr_daee_1 / khalid (the main demo account).
-// The AI never blocks the dāʿī: every open draft can be edited and approved;
-// AI issues and level D only require the responsibility checkbox.
-//   drf_1  level A, ANSWER, PASS            → in_review, approvable
-//   drf_2  level B, ANSWER, NEEDS_REVIEW    → in_review, warnings checkbox
-//   drf_3  ABSTAIN before generation        → "AI couldn't draft": empty editor
+// Draft scenarios for usr_daee_1 / khalid (the main demo account), matching
+// docs/api.md: every open draft is `in_review` (the AI never blocks the dāʿī),
+// `text` is "" when the AI wrote no draft, and requiresAcknowledgement follows
+// the backend formula (mocks/policy.js).
+//   drf_1  level A, ANSWER, PASS            → approvable; AI text has **Markdown** (stripped in the editor)
+//   drf_2  level B, ANSWER, NEEDS_REVIEW    → warnings checkbox
+//   drf_3  ABSTAIN before generation        → "Insufficient evidence": empty editor
 //   drf_4  ABSTAIN after citation FAIL      → "Verification failed": AI draft editable
 //   drf_5  level D, REFER                   → referral notice, "Write an answer anyway"
 //   drf_6  CLARIFY                          → "Unclear question": empty editor
 //   drf_7  already approved                 → published as ans_1
 // q_2 has two published answers (ans_1, ans_2) for the compare screen.
+// q_8 is "failed" (the AI did not answer in time): no drafts.
 
 // Timestamps relative to when the mock data is first created.
 const ago = (minutes) => new Date(Date.now() - minutes * 60_000).toISOString()
@@ -45,13 +48,16 @@ export const QUESTIONS = [
   question('q_5', "What was the mission of Prophet Muhammad according to the Qur'an?", classification('seerah_history', 'A', 'low', 'ANSWER'), 'awaiting_review', ago(15)),
   question('q_6', 'My father is not Muslim. Am I allowed to attend his holiday dinner?', classification('fiqh', 'D', 'high', 'REFER'), 'referred', ago(10)),
   question('q_7', 'What about the thing in that chapter?', classification('other', 'A', 'low', 'CLARIFY'), 'awaiting_review', ago(5)),
+  // AI timed out (AI_TIMEOUT_MS): no classification, no drafts.
+  question('q_8', 'What does the Qur\'an say about patience?', null, 'failed', ago(2)),
 ]
 
+// Builds a draft in the backend's shape: `text` is the AI draft or "" when the
+// AI wrote none, and requiresAcknowledgement uses the backend's formula.
 function draft(fields) {
   const { questionId, daeeId = 'usr_daee_1', ...rest } = fields
   const q = QUESTIONS.find((item) => item.id === questionId)
-  const text = rest.generatedText
-  return {
+  const base = {
     question: {
       id: q.id,
       text: q.text,
@@ -59,11 +65,16 @@ function draft(fields) {
       classification: { category: q.classification.category, level: q.classification.level, risk: q.classification.risk },
     },
     safety: { decision: 'ALLOW', reason: 'Question is within approved scope.' },
-    text,
-    versions: text ? [{ text, editedAt: q.createdAt }] : [],
     citations: [],
-    requiresAcknowledgement: false,
     ...rest,
+  }
+  const generatedText = base.generatedText ?? null
+  return {
+    ...base,
+    generatedText,
+    text: generatedText ?? '',
+    versions: generatedText ? [{ text: generatedText, editedAt: q.createdAt, editedBy: null }] : [],
+    requiresAcknowledgement: needsAcknowledgement({ ...base, classification: base.question.classification }),
     _daeeId: daeeId,
     _createdAt: q.createdAt,
   }
@@ -71,7 +82,7 @@ function draft(fields) {
 
 const ikhlas = [E.ikhlas1, E.ikhlas2, E.ikhlas3, E.ikhlas4]
 const IKHLAS_TEXT =
-  'In Islam, God (Allah in Arabic) is One, with no partner and no equal. The Qur\'an summarises this in a short chapter, Surat al-Ikhlas: God is One (Al-Ikhlas 112:1), the One on whom all depend while He depends on no one (Al-Ikhlas 112:2), He neither begets nor was begotten (Al-Ikhlas 112:3), and nothing is comparable to Him (Al-Ikhlas 112:4). This belief in the absolute oneness of God, called tawhid, is the foundation of the Islamic faith.'
+  'In Islam, God (Allah in Arabic) is One, with no partner and no equal. The Qur\'an summarises this in a short chapter, Surat al-Ikhlas: God is One (Al-Ikhlas 112:1), the One on whom all depend while He depends on no one (Al-Ikhlas 112:2), He neither begets nor was begotten (Al-Ikhlas 112:3), and nothing is comparable to Him (Al-Ikhlas 112:4). This belief in the absolute oneness of God, called **tawhid**, is the foundation of the Islamic faith.'
 
 export const DRAFTS = [
   draft({
@@ -113,12 +124,11 @@ export const DRAFTS = [
         'The final sentence generalises beyond the cited verse; consider adding supporting evidence or softening the wording.',
       ],
     },
-    requiresAcknowledgement: true,
   }),
   draft({
     id: 'drf_3',
     questionId: 'q_4',
-    status: 'blocked',
+    status: 'in_review',
     aiAction: 'ABSTAIN',
     safety: { decision: 'REVIEW', reason: 'Retrieved evidence is insufficient for generation.' },
     generatedText: null,
@@ -128,7 +138,7 @@ export const DRAFTS = [
   draft({
     id: 'drf_4',
     questionId: 'q_5',
-    status: 'blocked',
+    status: 'in_review',
     aiAction: 'ABSTAIN',
     generatedText:
       "The Qur'an describes the mission of Prophet Muhammad as a mercy to all the worlds (Al-Anbiya 21:107). It also states that he was sent to complete good character (Al-Qalam 68:4).",
@@ -150,7 +160,7 @@ export const DRAFTS = [
   draft({
     id: 'drf_5',
     questionId: 'q_6',
-    status: 'blocked',
+    status: 'in_review',
     aiAction: 'REFER',
     safety: { decision: 'BLOCK', reason: 'Personal ruling (level D): refer to a qualified scholar.' },
     generatedText: null,
@@ -187,8 +197,6 @@ export const ANSWERS = [
     finalText:
       "The Qur'an states that God created humans and jinn to worship Him (Adh-Dhariyat 51:56). In Islam, worship is broad: it includes prayer and remembrance, but also honesty, kindness to parents, seeking knowledge and helping others when done for God's sake. So the purpose of life is to know God and live every part of life in a way that pleases Him.",
     citations: citationsFor([E.dhariyat56]),
-    verificationStatus: 'PASS',
-    aiAssisted: true,
     publishedAt: ago(150),
     _questionId: 'q_2',
     _draftId: 'drf_7',
@@ -199,8 +207,6 @@ export const ANSWERS = [
     finalText:
       "Islam teaches that life has a clear purpose: to worship the One God (Adh-Dhariyat 51:56). Worship here means a relationship with your Creator expressed through prayer, good character and service to people. The Prophet was described as a mercy to all the worlds (Al-Anbiya 21:107), and Muslims try to follow that example of mercy in daily life.",
     citations: citationsFor([E.dhariyat56, E.anbiya107]),
-    verificationStatus: 'NEEDS_REVIEW',
-    aiAssisted: true,
     publishedAt: ago(120),
     _questionId: 'q_2',
     _draftId: null,

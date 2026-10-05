@@ -13,11 +13,15 @@ export async function updateDraft(draftId, text) {
 }
 
 /**
+ * Publishes in one call (docs/api.md): `text` is the final answer, saved as a
+ * version and published together. Without `text` the server publishes the
+ * current draft text.
  * @returns {Promise<{ answerId: string }>}
- * Throws ApiError 422 `blocked` or 422 `warnings_not_acknowledged`.
+ * Throws ApiError 422 `warnings_not_acknowledged`, 400 empty text, 409 already closed.
  */
-export function approveDraft(draftId, { acknowledgeWarnings = false } = {}) {
-  return request('POST', `/drafts/${id(draftId)}/approve`, { body: { acknowledgeWarnings } })
+export function approveDraft(draftId, { acknowledgeWarnings = false, text } = {}) {
+  const body = text === undefined ? { acknowledgeWarnings } : { acknowledgeWarnings, text }
+  return request('POST', `/drafts/${id(draftId)}/approve`, { body })
 }
 
 /** @returns {Promise<{ status: 'rejected' }>} */

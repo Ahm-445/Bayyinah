@@ -7,12 +7,17 @@ export const SCORING = Object.freeze({
 })
 
 /**
- * Deterministic score, recomputed from the data on every read (never stored),
- * so it always matches what has been published and selected.
+ * Deterministic score breakdown, recomputed from the data on every read (never
+ * stored), in the backend's shape: stats.scoreBreakdown (docs/api.md 3).
  */
-export function scoreFor(userId, { answers, questions }) {
+export function scoreBreakdownFor(userId, { answers, questions }) {
   const published = answers.filter((a) => a.daee?.id === userId)
   const publishedIds = new Set(published.map((a) => a.id))
   const selected = questions.filter((q) => q._selectedAnswerId && publishedIds.has(q._selectedAnswerId))
-  return published.length * SCORING.PUBLISHED_ANSWER + selected.length * SCORING.SELECTED_ANSWER
+  return {
+    published: published.length,
+    selected: selected.length,
+    publishedPoints: published.length * SCORING.PUBLISHED_ANSWER,
+    selectedPoints: selected.length * SCORING.SELECTED_ANSWER,
+  }
 }

@@ -10,6 +10,15 @@ export function mapDashboard(raw) {
       rejected: stats.rejected ?? 0,
       referred: stats.referred ?? 0,
       score: stats.score ?? 0,
+      // { published, selected, publishedPoints, selectedPoints } or null (older servers).
+      scoreBreakdown: stats.scoreBreakdown
+        ? {
+            published: stats.scoreBreakdown.published ?? 0,
+            selected: stats.scoreBreakdown.selected ?? 0,
+            publishedPoints: stats.scoreBreakdown.publishedPoints ?? 0,
+            selectedPoints: stats.scoreBreakdown.selectedPoints ?? 0,
+          }
+        : null,
     },
     queue: list(raw?.queue).map((item) => ({
       draftId: item.draftId,

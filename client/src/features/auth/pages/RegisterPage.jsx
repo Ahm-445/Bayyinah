@@ -8,12 +8,16 @@ import { homeFor } from '../../../shared/lib/roles.js'
 import Field from '../components/Field.jsx'
 
 const USERNAME = /^[A-Za-z0-9_.-]{3,32}$/
+// docs/api.md: password 8–128 characters
 const MIN_PASSWORD = 8
+const MAX_PASSWORD = 128
 
 function validate({ username, password, confirm }, t) {
   const errors = {}
   if (!USERNAME.test(username)) errors.username = t('register.usernameRule')
-  if (password.length < MIN_PASSWORD) errors.password = t('register.passwordRule', { min: MIN_PASSWORD })
+  if (password.length < MIN_PASSWORD || password.length > MAX_PASSWORD) {
+    errors.password = t('register.passwordRule', { min: MIN_PASSWORD, max: MAX_PASSWORD })
+  }
   if (confirm !== password) errors.confirm = t('register.mismatch')
   return errors
 }
@@ -66,7 +70,7 @@ export default function RegisterPage() {
           autoComplete="new-password"
           value={values.password}
           onChange={set('password')}
-          hint={t('register.passwordRule', { min: MIN_PASSWORD })}
+          hint={t('register.passwordRule', { min: MIN_PASSWORD, max: MAX_PASSWORD })}
           error={errors.password}
         />
         <Field

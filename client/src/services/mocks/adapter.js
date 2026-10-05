@@ -1,10 +1,11 @@
 import { config } from '../config.js'
 import { ApiError } from '../errors.js'
 import { clearAuth, getAuth } from '../session.js'
-import { EVIDENCE, citationsFor } from './fixtures/evidence.js'
 import { ANSWERS, DRAFTS, QUESTIONS } from './fixtures/scenarios.js'
 import { SOURCES } from './fixtures/sources.js'
-import { scoreFor } from './scoring.js'
+import { processQuestion } from './mockAI.js'
+import { citationsFromText, draftFromResult } from './policy.js'
+import { scoreBreakdownFor } from './scoring.js'
 import { USERS } from './fixtures/users.js'
 
 // Mock of the REST API in docs/api.md, part 2, updated for the team decision
@@ -17,7 +18,7 @@ import { USERS } from './fixtures/users.js'
 // Error codes: already_selected, blocked, warnings_not_acknowledged (api.md),
 // username_taken (pending); other errors have no code.
 
-const STORAGE_KEY = 'bayyinah.mockDb.v4'
+const STORAGE_KEY = 'bayyinah.mockDb.v5'
 
 function seed() {
   return {
@@ -72,14 +73,12 @@ function publicView(record) {
 }
 
 // ---------------------------------------------------------------------------
-// Simulated AI pipeline for newly submitted questions.
+// Simulated AI pipeline for newly submitted questions (docs/api.md 5).
 // Status is derived from elapsed time on each read, so polling sees
-// submitted → drafting → awaiting_review (or referred).
+// submitted → drafting → awaiting_review | referred | failed.
 
 const DRAFTING_AFTER_MS = 1500
 const DONE_AFTER_MS = 5000
-// Crude stand-in for the backend classifier: personal questions → level D.
-const PERSONAL = /\b(my|should i|can i|am i|fatwa)\b/i
 
 function advanceQuestion(q) {
   if (!q._submittedAtMs || q._processed) return
@@ -91,56 +90,19 @@ function advanceQuestion(q) {
   }
 
   q._processed = true
-  const daees = db.users.filter((u) => u.role === 'daee')
-  const personal = PERSONAL.test(q.text)
-
-  if (personal) {
-    q.status = 'referred'
-    q.classification = { category: 'fiqh', level: 'D', risk: 'high', action: 'REFER', reasons: [] }
-  } else {
-    q.status = 'awaiting_review'
-    q.classification = { category: 'general_islam', level: 'A', risk: 'low', action: 'ANSWER', reasons: [] }
+  let result
+  try {
+    result = processQuestion({ text: q.text, language: q.language })
+  } catch {
+    // The AI threw or took longer than AI_TIMEOUT_MS: no drafts.
+    q.status = 'failed'
+    return
   }
 
-  const evidence = personal ? [] : [EVIDENCE.dhariyat56]
-  const generatedText = personal
-    ? null
-    : `[Mock draft] This is a placeholder AI draft for: "${q.text}". The Qur'an states that God created humans and jinn to worship Him (Adh-Dhariyat 51:56).`
-
-  for (const daee of daees) {
-    db.drafts.push({
-      id: newId('drf'),
-      status: personal ? 'blocked' : 'in_review',
-      question: {
-        id: q.id,
-        text: q.text,
-        language: q.language,
-        classification: { category: q.classification.category, level: q.classification.level, risk: q.classification.risk },
-      },
-      aiAction: personal ? 'REFER' : 'ANSWER',
-      safety: personal
-        ? { decision: 'BLOCK', reason: 'Personal ruling (level D): refer to a qualified scholar.' }
-        : { decision: 'ALLOW', reason: 'Question is within approved scope.' },
-      generatedText,
-      text: generatedText,
-      versions: generatedText ? [{ text: generatedText, editedAt: now() }] : [],
-      evidence,
-      citations: citationsFor(evidence),
-      verification: personal
-        ? null
-        : {
-            status: 'PASS',
-            citationValid: true,
-            evidenceSupported: true,
-            unsupportedClaims: [],
-            missingCitations: [],
-            riskFlags: [],
-            warnings: [],
-          },
-      requiresAcknowledgement: false,
-      _daeeId: daee.id,
-      _createdAt: now(),
-    })
+  q.classification = { ...result.classification }
+  q.status = result.aiAction === 'REFER' ? 'referred' : 'awaiting_review'
+  for (const daee of db.users.filter((u) => u.role === 'daee')) {
+    db.drafts.push(draftFromResult({ id: newId('drf'), question: q, result, daeeId: daee.id, createdAt: now() }))
   }
 }
 
@@ -276,13 +238,15 @@ const routes = [
     const user = requireUser(ctx)
     const mine = db.drafts.filter((d) => user.role === 'admin' || d._daeeId === user.id)
     const count = (fn) => mine.filter(fn).length
+    const breakdown = scoreBreakdownFor(user.id, db) // rules in mocks/scoring.js
     return {
       stats: {
-        pending: count((d) => d.status === 'in_review'),
+        pending: count((d) => !isClosed(d)), // equals the queue length (docs/api.md)
         approved: count((d) => d.status === 'approved'),
         rejected: count((d) => d.status === 'rejected'),
         referred: count((d) => d.aiAction === 'REFER'),
-        score: scoreFor(user.id, db), // derived; rules in mocks/scoring.js (pending)
+        score: breakdown.publishedPoints + breakdown.selectedPoints,
+        scoreBreakdown: breakdown,
       },
       queue: mine
         .filter((d) => !isClosed(d))
@@ -313,29 +277,28 @@ const routes = [
   ['POST', '/drafts/:id/approve', (ctx) => {
     const draft = findOwnDraft(ctx, ctx.params.id)
     if (isClosed(draft)) fail(409, `This draft was already ${draft.status}.`)
-    // Product rule: the AI never blocks the dāʿī. There is no 422 `blocked` any
-    // more; when the AI could not give a usable draft (blocked / CLARIFY /
-    // verification FAIL) or the question is level D, the dāʿī must acknowledge
-    // responsibility (acknowledgeWarnings: true), as for NEEDS_REVIEW warnings.
-    const needsAcknowledgement =
-      draft.requiresAcknowledgement ||
-      draft.status === 'blocked' ||
-      draft.aiAction === 'CLARIFY' ||
-      draft.verification?.status === 'FAIL' ||
-      draft.question.classification.level === 'D'
-    if (needsAcknowledgement && ctx.body?.acknowledgeWarnings !== true) {
+    // The AI never blocks the dāʿī (no 422 `blocked`). requiresAcknowledgement is
+    // set when the draft is created, with the backend's formula (mocks/policy.js).
+    if (draft.requiresAcknowledgement && ctx.body?.acknowledgeWarnings !== true) {
       fail(422, 'Please confirm you have reviewed this answer and take responsibility for it.', 'warnings_not_acknowledged')
+    }
+    // approve accepts the final text in the same request (docs/api.md): saved as a version, then published.
+    if (ctx.body?.text !== undefined) {
+      if (typeof ctx.body.text !== 'string' || !ctx.body.text.trim()) fail(400, 'Write the answer before approving.')
+      if (ctx.body.text !== draft.text) {
+        draft.text = ctx.body.text
+        draft.versions.push({ text: ctx.body.text, editedAt: now(), editedBy: ctx.user.id })
+      }
     }
     if (!draft.text?.trim()) fail(400, 'Write the answer before approving.')
     const user = db.users.find((u) => u.id === draft._daeeId) ?? ctx.user
-    // The questioner never sees citations; the dāʿī cites sources in the text.
+    // Answer shape from docs/api.md: no verification or AI details; citations
+    // are only the evidence the final text cites.
     const answer = {
       id: newId('ans'),
       daee: { id: user.id, displayName: user.displayName },
       finalText: draft.text,
-      citations: draft.citations,
-      verificationStatus: draft.verification?.status ?? null,
-      aiAssisted: Boolean(draft.generatedText),
+      citations: citationsFromText(draft.text, draft.evidence),
       publishedAt: now(),
       _questionId: draft.question.id,
       _draftId: draft.id,
@@ -382,6 +345,9 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 export async function mockRequest(method, path, { body } = {}) {
   await sleep(config.mockLatencyMs)
   db = load(db) // pick up changes made in another tab
+  // Like the backend's background AI: every pending question advances on any
+  // request, so dāʿīs get drafts even if the questioner never polls.
+  db.questions.forEach(advanceQuestion)
   const cleanPath = path.split('?')[0]
 
   let status = 200

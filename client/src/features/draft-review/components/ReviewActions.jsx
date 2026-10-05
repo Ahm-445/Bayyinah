@@ -108,7 +108,8 @@ export default function ReviewActions({ draft, unsavedText }) {
           <button
             type="button"
             disabled={!canApprove}
-            onClick={() => approve.mutate({ unsavedText, acknowledgeWarnings: acknowledged })}
+            // Always send the editor text: it is plain text (Markdown stripped) even when unedited.
+            onClick={() => approve.mutate({ text: currentText, acknowledgeWarnings: acknowledged })}
             className="rounded bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-500"
           >
             {approve.isPending

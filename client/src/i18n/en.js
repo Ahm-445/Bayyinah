@@ -6,8 +6,6 @@ export default {
   },
   app: {
     brand: 'Bayyinah',
-    mockReset: 'Mock API · reset',
-    mockResetTitle: 'Reset mock data to the seed fixtures and sign out',
   },
   nav: {
     ask: 'Ask a question',
@@ -34,6 +32,11 @@ export default {
     conflict: 'This has already been done.',
     badRequest: 'Please check what you entered and try again.',
     unprocessable: 'This action cannot be completed.',
+    rateLimited: 'Too many requests. Please try again later.',
+    rateLimitedRetry: {
+      one: 'Too many requests. Please try again in {count} second.',
+      other: 'Too many requests. Please try again in {count} seconds.',
+    },
     codes: {
       already_selected: 'You already selected an answer for this question.',
       warnings_not_acknowledged: 'Please confirm you have reviewed this answer and take responsibility for it.',
@@ -60,14 +63,13 @@ export default {
     newHere: 'New here?',
     createAccount: 'Create an account',
     toAsk: 'to ask a question.',
-    mockAccounts: 'Mock accounts (password demo1234): questioners sara, john · dāʿīs khalid, maryam · admin',
   },
   register: {
     title: 'Create an account',
     subtitle: 'Your questions and answers are private to your account.',
     usernameHint: 'Do not use your real name if you prefer to stay anonymous.',
     usernameRule: '3–32 characters: letters, numbers, dot, dash or underscore.',
-    passwordRule: 'At least {min} characters.',
+    passwordRule: 'Use {min}–{max} characters.',
     confirm: 'Confirm password',
     mismatch: 'Passwords do not match.',
     create: 'Create account',
@@ -126,8 +128,8 @@ export default {
     referredTitle: 'This question needs a scholar',
     referredBody:
       'Your question asks for a personal religious ruling (fatwa), which depends on individual circumstances. Bayyinah only answers general questions, so we recommend asking a qualified scholar directly.',
-    failedTitle: 'We could not process your question',
-    failedBody: 'Something went wrong on our side. Please try again:',
+    failedTitle: 'We could not prepare an answer to this question',
+    failedBody: 'Our AI assistant did not respond in time, so the question was not sent to the dāʿīs. Nothing is wrong with your question. Please ask it again:',
   },
   answers: {
     noneTitle: 'No answers yet',
@@ -155,6 +157,8 @@ export default {
   queue: {
     title: 'Work queue',
     stats: { pending: 'Pending', approved: 'Approved', rejected: 'Rejected', referred: 'Referred', score: 'Score' },
+    scoreBreakdown: '{published} published (+{publishedPoints}) · {selected} selected (+{selectedPoints})',
+    scoreRule: '+1 per published answer, +10 each time a questioner selects your answer',
     needsReview: 'Needs review',
     empty: 'No drafts are waiting for review.',
     referredTitle: 'Referred (Level D)',
