@@ -1,0 +1,26 @@
+import { list } from './common.js'
+
+/** GET /api/daee/dashboard → UI view model. */
+export function mapDashboard(raw) {
+  const stats = raw?.stats ?? {}
+  return {
+    stats: {
+      pending: stats.pending ?? 0,
+      approved: stats.approved ?? 0,
+      rejected: stats.rejected ?? 0,
+      referred: stats.referred ?? 0,
+      score: stats.score ?? 0,
+    },
+    queue: list(raw?.queue).map((item) => ({
+      draftId: item.draftId,
+      questionId: item.questionId,
+      questionText: item.questionText ?? '',
+      level: item.level ?? null,
+      // Optional (not in api.md; the mock sends it): lets the queue label AI issues exactly.
+      aiAction: item.aiAction ?? null,
+      verificationStatus: item.verificationStatus ?? null,
+      status: item.status,
+      createdAt: item.createdAt ?? null,
+    })),
+  }
+}
