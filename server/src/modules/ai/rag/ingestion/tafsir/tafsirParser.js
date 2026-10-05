@@ -41,7 +41,7 @@ function parseTafsirData(data, { expectedAyahCount = EXPECTED_AYAH_COUNT } = {})
     throw new Error(`Expected ${expectedAyahCount} ayah rows, got ${data.ayahs?.length ?? 0}`);
   }
 
-  const globalReferences = new Map();
+  const rowReferences = [];
   const rowsSeen = new Set();
   data.ayahs.forEach((row, index) => {
     const surahNumber = Number(row?.surah);
@@ -52,9 +52,16 @@ function parseTafsirData(data, { expectedAyahCount = EXPECTED_AYAH_COUNT } = {})
     const key = `${surahNumber}:${ayahNumber}`;
     if (rowsSeen.has(key)) throw new Error(`Duplicate tafsir ayah row ${key}`);
     rowsSeen.add(key);
-    globalReferences.set(index + 1, { surahNumber, ayahNumber });
+    rowReferences.push({ surahNumber, ayahNumber });
     if (!Array.isArray(row.content)) throw new Error(`Tafsir content must be an array at ${key}`);
   });
+
+  // Global ayah numbers follow mushaf order, but the dump's rows are sorted by surah as a
+  // string (1, 10, 100, ...). Number the rows only after a numeric (surah, ayah) sort.
+  const globalReferences = new Map();
+  [...rowReferences]
+    .sort((a, b) => a.surahNumber - b.surahNumber || a.ayahNumber - b.ayahNumber)
+    .forEach((reference, index) => globalReferences.set(index + 1, reference));
 
   const blocks = new Map();
   for (const [rowIndex, row] of data.ayahs.entries()) {
