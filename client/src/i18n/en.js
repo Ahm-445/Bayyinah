@@ -6,8 +6,6 @@ export default {
   },
   app: {
     brand: 'Bayyinah',
-    mockReset: 'Mock API · reset',
-    mockResetTitle: 'Reset mock data to the seed fixtures and sign out',
   },
   nav: {
     ask: 'Ask a question',
@@ -65,7 +63,6 @@ export default {
     newHere: 'New here?',
     createAccount: 'Create an account',
     toAsk: 'to ask a question.',
-    mockAccounts: 'Mock accounts (password demo1234): questioners sara, john · dāʿīs khalid, maryam · admin',
   },
   register: {
     title: 'Create an account',

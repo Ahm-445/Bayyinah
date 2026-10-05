@@ -6,8 +6,6 @@ export default {
   },
   app: {
     brand: 'بيّنة',
-    mockReset: 'واجهة تجريبية · إعادة ضبط',
-    mockResetTitle: 'إعادة البيانات التجريبية إلى حالتها الأولى وتسجيل الخروج',
   },
   nav: {
     ask: 'اطرح سؤالًا',
@@ -69,7 +67,6 @@ export default {
     newHere: 'مستخدم جديد؟',
     createAccount: 'أنشئ حسابًا',
     toAsk: 'لتطرح سؤالك.',
-    mockAccounts: 'حسابات تجريبية (كلمة المرور demo1234): السائلون sara وjohn · الدعاة khalid وmaryam · admin',
   },
   register: {
     title: 'إنشاء حساب',

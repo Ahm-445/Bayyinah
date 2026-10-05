@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { useI18n } from '../../i18n/core.js'
+import { MOCK_STRINGS } from '../../i18n/mockStrings.js'
 import { clearAuth } from '../../services/session.js'
 
 async function resetMocks() {
@@ -28,7 +29,7 @@ function LanguageToggle() {
 }
 
 export default function AppHeader({ homeTo, children }) {
-  const { t } = useI18n()
+  const { lang } = useI18n()
   return (
     <header className="border-b border-stone-200 bg-white">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
@@ -43,10 +44,10 @@ export default function AppHeader({ homeTo, children }) {
           <button
             type="button"
             onClick={resetMocks}
-            title={t('app.mockResetTitle')}
+            title={MOCK_STRINGS[lang].resetTitle}
             className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-200"
           >
-            {t('app.mockReset')}
+            {MOCK_STRINGS[lang].reset}
           </button>
         )}
         <div className="ms-auto flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">

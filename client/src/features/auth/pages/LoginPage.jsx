@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 import { useI18n } from '../../../i18n/core.js'
+import { MOCK_STRINGS } from '../../../i18n/mockStrings.js'
 import { login } from '../../../services/api/auth.js'
 import { isApiError, userMessage } from '../../../services/errors.js'
 import { getAuth } from '../../../services/session.js'
@@ -78,7 +79,7 @@ export default function LoginPage() {
       </p>
       {/* Inline env check (not config.useMocks) so the build drops it when mocks are off. */}
       {import.meta.env.VITE_USE_MOCKS === 'true' && (
-        <p className="mt-4 text-xs text-stone-500">{t('auth.mockAccounts')}</p>
+        <p className="mt-4 text-xs text-stone-500">{MOCK_STRINGS[i18n.lang].accounts}</p>
       )}
     </section>
   )

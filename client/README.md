@@ -26,6 +26,30 @@ All requests go through `src/services/transport.js`, which picks the mock or the
 keeps its data in `localStorage`, so it survives reloads and is shared between tabs. The amber
 **Mock API · reset** button in the header restores the seed data and signs you out.
 
+## Deploy (static hosting)
+
+Build with the real API and the backend's **full** URL. A static host has no `/api` proxy:
+
+```bash
+VITE_USE_MOCKS=false VITE_API_BASE_URL=https://<backend>/api npm run build   # output in dist/
+```
+
+On Netlify or Cloudflare Pages, set the same two variables in the site's environment settings,
+use build command `npm run build` and publish directory `dist` (base directory `client`).
+Variables set by the host or the shell override `.env.local`, so a local mock setting cannot
+leak into a deploy. The build prints a `[bayyinah]` warning if `VITE_API_BASE_URL` is not a
+full URL or if mocks are on.
+
+- **SPA fallback:** `public/_redirects` (`/* /index.html 200`) is copied to `dist/`, so
+  refreshing any route (`/daee/drafts/…`, `/questions/…`) serves the app. Netlify needs this
+  file. Cloudflare Pages also serves `index.html` for unknown paths on its own when there is no
+  `404.html`, so the file is harmless there.
+- **No mock code in production:** with `VITE_USE_MOCKS=false` the build contains no mock
+  adapter, demo accounts or passwords, "Mock API · reset" button or mock login hint (each is
+  behind an inline `import.meta.env.VITE_USE_MOCKS === 'true'` check that the build removes).
+- **Backend:** add the site's origin to the server's `CLIENT_ORIGIN` (comma separated), since the
+  browser now calls the backend cross-origin.
+
 ## Mock accounts
 
 All passwords are `demo1234`. Sign in at `/login`; you are sent to the dashboard for your role.
