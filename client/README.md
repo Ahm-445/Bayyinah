@@ -37,8 +37,14 @@ VITE_USE_MOCKS=false VITE_API_BASE_URL=https://<backend>/api npm run build   # o
 On Netlify or Cloudflare Pages, set the same two variables in the site's environment settings,
 use build command `npm run build` and publish directory `dist` (base directory `client`).
 Variables set by the host or the shell override `.env.local`, so a local mock setting cannot
-leak into a deploy. The build prints a `[bayyinah]` warning if `VITE_API_BASE_URL` is not a
-full URL or if mocks are on.
+leak into a deploy. The build prints a `[bayyinah]` warning if mocks are on, and if
+`VITE_API_BASE_URL` is not a full URL it falls back to the Render backend
+(`https://bayyinah-eteb.onrender.com/api`) instead of shipping a build that posts to itself.
+
+**Render** (static site, root directory `client`, build `npm ci && npm run build`, publish
+`dist`): Render ignores `public/_redirects`, so add a rewrite under the site's
+*Redirects/Rewrites*: source `/*`, destination `/index.html`, action **Rewrite**. Without it,
+opening or refreshing `/login` returns 404. `render.yaml` at the repo root has both services.
 
 - **SPA fallback:** `public/_redirects` (`/* /index.html 200`) is copied to `dist/`, so
   refreshing any route (`/daee/drafts/…`, `/questions/…`) serves the app. Netlify needs this

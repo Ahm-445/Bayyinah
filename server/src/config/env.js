@@ -38,9 +38,11 @@ const env = {
   nodeEnv,
   isProduction,
   port: Number(process.env.PORT) || 5000,
-  // One or more allowed frontend origins, comma separated.
+  // One or more allowed frontend origins, comma separated. In production the
+  // deployed Render frontend is the default; CLIENT_ORIGIN overrides it.
   clientOrigins: splitList(
-    process.env.CLIENT_ORIGIN || "http://localhost:5173"
+    process.env.CLIENT_ORIGIN ||
+      (isProduction ? "https://bayyinah-frontend.onrender.com" : "http://localhost:5173")
   ),
   mongodbUri: process.env.MONGODB_URI,
   // Must match the database the AI module reads knowledge_chunks from.
