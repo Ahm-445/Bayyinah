@@ -17,7 +17,7 @@ const {
 
 const {
   createVoyageEmbeddingProvider,
-} = require("../rag/embeddings/voyageEmbeddingProvider");
+} = require("../providers/voyageEmbeddingProvider");
 
 const {
   createRetriever,

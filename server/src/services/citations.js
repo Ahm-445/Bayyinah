@@ -20,7 +20,7 @@ function normalizeEvidence(item) {
     score: item.score,
     citation: {
       ...citation,
-      sourceTitle: citation.sourceTitle ?? item.sourceTitle ?? null,
+      sourceTitle: citation.sourceTitle ?? item.sourceTitle ?? citation.title ?? null,
       reference: citation.reference ?? item.reference ?? null,
       sourceType:
         citation.sourceType ?? item.sourceType ?? citation.category ?? null,

@@ -4,7 +4,7 @@ const assert = require("assert");
 
 const {
   createVoyageEmbeddingProvider,
-} = require("../../embeddings/voyageEmbeddingProvider");
+} = require("../../../providers/voyageEmbeddingProvider");
 
 async function main() {
   const provider =

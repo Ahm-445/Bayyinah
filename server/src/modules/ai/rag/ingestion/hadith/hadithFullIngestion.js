@@ -2,7 +2,7 @@ require("dotenv").config();
 
 const path = require("path");
 const { connectMongo, closeMongo } = require("../../storage/mongoClient");
-const { createVoyageEmbeddingProvider } = require("../../embeddings/voyageEmbeddingProvider");
+const { createVoyageEmbeddingProvider } = require("../../../providers/voyageEmbeddingProvider");
 const { ingestHadith } = require("./hadithIngestion");
 
 function readOptions(argv) {

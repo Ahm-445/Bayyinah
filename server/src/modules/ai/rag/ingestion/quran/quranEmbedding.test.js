@@ -13,7 +13,7 @@ const {
 
 const {
   createVoyageEmbeddingProvider,
-} = require("../../embeddings/voyageEmbeddingProvider");
+} = require("../../../providers/voyageEmbeddingProvider");
 
 const dumpPath =
   "data/quran/mushafs-1.json.gz";

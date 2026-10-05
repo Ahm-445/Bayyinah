@@ -16,11 +16,12 @@ const {
 
 const {
   buildQuranChunk,
+  SOURCE_ID,
 } = require("./quranChunkBuilder");
 
 const {
   createVoyageEmbeddingProvider,
-} = require("../../embeddings/voyageEmbeddingProvider");
+} = require("../../../providers/voyageEmbeddingProvider");
 
 const DUMP_PATH = "data/quran/mushafs-1.json.gz";
 
@@ -126,7 +127,7 @@ async function main() {
 
   const count =
     await collection.countDocuments({
-      sourceId: "quranpedia-quran-hafs",
+      sourceId: SOURCE_ID,
     });
 
   console.log("\n=== Validation ===");
@@ -142,7 +143,7 @@ async function main() {
 
   const invalidDimensions =
     await collection.countDocuments({
-      sourceId: "quranpedia-quran-hafs",
+      sourceId: SOURCE_ID,
       dimensions: { $ne: 1024 },
     });
 

@@ -149,6 +149,8 @@ function createVectorRetriever({
           ...item.metadata,
           sourceId: item.sourceId,
           chunkId: item.chunkId,
+          // Qur'an chunks name their source `title`; hadith/translation use `sourceTitle`.
+          sourceTitle: item.metadata?.sourceTitle || item.metadata?.title || null,
         },
       })
     );
