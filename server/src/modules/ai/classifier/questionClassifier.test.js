@@ -81,4 +81,21 @@ for (const text of [
 // "can i" no longer matches inside "can islam".
 assert.strictEqual(classifyQuestion("Can Islam and science coexist?").action, "ANSWER");
 
+// Hadith/sunnah and theology questions get their own categories, not "other".
+for (const [text, category] of [
+  ["What did the Prophet say about kindness to neighbours?", "hadith"],
+  ["What did Prophet Muhammad say about smiling?", "hadith"],
+  ["ماذا قال النبي عن الجار؟", "hadith"],
+  ["What does the sunnah say about fasting on Mondays?", "hadith"],
+  ["What do Muslims believe about the Day of Judgment?", "aqeedah"],
+  ["What is predestination (qadar) in Islam?", "aqeedah"],
+  ["Who are the angels in Islam?", "aqeedah"],
+  ["ما هي أركان الإيمان؟", "aqeedah"],
+  ["What did the Prophet Muhammad do in Mecca?", "seerah_history"],
+]) {
+  const classification = classifyQuestion(text);
+  assert.strictEqual(classification.category, category, text);
+  assert.strictEqual(classification.action, "ANSWER", text);
+}
+
 console.log("Arabic question classifier tests: PASSED");
