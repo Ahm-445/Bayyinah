@@ -93,27 +93,128 @@ const ENGLISH_SURAH_NAMES = [
   "Quraysh", "Al-Ma'un", "Al-Kawthar", "Al-Kafirun", "An-Nasr", "Al-Masad", "Al-Ikhlas", "Al-Falaq", "An-Nas",
 ];
 
+// Arabic surah names, index = surah number - 1 (same list as the client's SURAH_NAMES_AR).
+const ARABIC_SURAH_NAMES = [
+  "الفاتحة", "البقرة", "آل عمران", "النساء", "المائدة", "الأنعام", "الأعراف", "الأنفال", "التوبة",
+  "يونس", "هود", "يوسف", "الرعد", "إبراهيم", "الحجر", "النحل", "الإسراء", "الكهف", "مريم", "طه",
+  "الأنبياء", "الحج", "المؤمنون", "النور", "الفرقان", "الشعراء", "النمل", "القصص", "العنكبوت",
+  "الروم", "لقمان", "السجدة", "الأحزاب", "سبأ", "فاطر", "يس", "الصافات", "ص", "الزمر", "غافر",
+  "فصلت", "الشورى", "الزخرف", "الدخان", "الجاثية", "الأحقاف", "محمد", "الفتح", "الحجرات", "ق",
+  "الذاريات", "الطور", "النجم", "القمر", "الرحمن", "الواقعة", "الحديد", "المجادلة", "الحشر",
+  "الممتحنة", "الصف", "الجمعة", "المنافقون", "التغابن", "الطلاق", "التحريم", "الملك", "القلم",
+  "الحاقة", "المعارج", "نوح", "الجن", "المزمل", "المدثر", "القيامة", "الإنسان", "المرسلات",
+  "النبأ", "النازعات", "عبس", "التكوير", "الانفطار", "المطففين", "الانشقاق", "البروج", "الطارق",
+  "الأعلى", "الغاشية", "الفجر", "البلد", "الشمس", "الليل", "الضحى", "الشرح", "التين", "العلق",
+  "القدر", "البينة", "الزلزلة", "العاديات", "القارعة", "التكاثر", "العصر", "الهمزة", "الفيل",
+  "قريش", "الماعون", "الكوثر", "الكافرون", "النصر", "المسد", "الإخلاص", "الفلق", "الناس",
+];
+
+const VERSE_SOURCE_TYPES = ["quran", "tafsir", "translation"];
+// Longest same-surah range expanded verse by verse (Al-Baqarah has 286 ayahs).
+const MAX_EXPANDED_RANGE = 286;
+
+function isVerse(surahNumber, ayahNumber) {
+  return Number.isInteger(surahNumber) && surahNumber >= 1 && surahNumber <= 114 &&
+    Number.isInteger(ayahNumber) && ayahNumber >= 1;
+}
+
+function surahDisplayName(surahNumber, language = "en", metadataName = null) {
+  if (language === "ar") {
+    return ARABIC_SURAH_NAMES[surahNumber - 1] ||
+      String(metadataName || "").replace(/^سورة\s*/u, "") || `سورة ${surahNumber}`;
+  }
+  return ENGLISH_SURAH_NAMES[surahNumber - 1] || `Quran ${surahNumber}`;
+}
+
+/**
+ * "(الإخلاص 112:1)" / "(Al-Ikhlas 112:1)", or for tafsir
+ * "(تفسير البقرة 2:163)" / "(Tafsir on Al-Baqarah 2:163)".
+ * An endAyah in the same surah gives a range: "(Tafsir on Ali 'Imran 3:130–133)".
+ */
+function buildVerseReference({ surahNumber, ayahNumber, endAyah = null, tafsir = false, language = "en", surahName = null }) {
+  const range = Number.isInteger(endAyah) && endAyah > ayahNumber ? `–${endAyah}` : "";
+  const verse = `${surahDisplayName(surahNumber, language, surahName)} ${surahNumber}:${ayahNumber}${range}`;
+  if (!tafsir) return `(${verse})`;
+  return language === "ar" ? `(تفسير ${verse})` : `(Tafsir on ${verse})`;
+}
+
+/**
+ * Verses listed in a reference string such as "Quran 2:163",
+ * "Quran 3:130–3:133", "Quran 3:130-133" or "Quran 2:1, 2:3".
+ */
+function parseVerseReference(reference) {
+  const keys = [];
+  const pattern = /(\d{1,3})\s*:\s*(\d{1,3})(?:\s*[–—-]\s*(?:(\d{1,3})\s*:\s*)?(\d{1,3}))?/gu;
+  for (const match of String(reference).matchAll(pattern)) {
+    const surah = Number(match[1]);
+    const ayah = Number(match[2]);
+    if (!isVerse(surah, ayah)) continue;
+    keys.push(`${surah}:${ayah}`);
+    if (match[4] === undefined) continue;
+    const endSurah = match[3] === undefined ? surah : Number(match[3]);
+    const endAyah = Number(match[4]);
+    if (endSurah === surah && endAyah > ayah && endAyah - ayah <= MAX_EXPANDED_RANGE) {
+      for (let next = ayah + 1; next <= endAyah; next += 1) keys.push(`${surah}:${next}`);
+    } else if (isVerse(endSurah, endAyah)) {
+      // A range across surahs: keep both ends; metadata.references lists the rest.
+      keys.push(`${endSurah}:${endAyah}`);
+    }
+  }
+  return keys;
+}
+
+/**
+ * Every verse an evidence item covers ("2:163"): its own surahNumber/ayahNumber,
+ * and for tafsir chunks (which carry no surahNumber/ayahNumber) the verses in
+ * metadata.references[] and the metadata.reference label.
+ */
+function evidenceVerseKeys(item) {
+  const citation = item?.citation || {};
+  if (!VERSE_SOURCE_TYPES.includes(citation.sourceType || citation.category)) return [];
+  const keys = [];
+  if (isVerse(citation.surahNumber, citation.ayahNumber)) keys.push(`${citation.surahNumber}:${citation.ayahNumber}`);
+  for (const reference of Array.isArray(citation.references) ? citation.references : []) {
+    if (typeof reference === "string") keys.push(...parseVerseReference(reference));
+    else if (reference && isVerse(Number(reference.surahNumber), Number(reference.ayahNumber))) {
+      keys.push(`${Number(reference.surahNumber)}:${Number(reference.ayahNumber)}`);
+    }
+  }
+  if (typeof citation.reference === "string") keys.push(...parseVerseReference(citation.reference));
+  return [...new Set(keys)];
+}
+
 function buildInlineReference(evidence, language = "en") {
   const citation = evidence?.citation || {};
   const sourceType = citation.sourceType || citation.category;
-  const hasVerse = Number.isInteger(citation.surahNumber) && citation.surahNumber > 0 &&
-    Number.isInteger(citation.ayahNumber) && citation.ayahNumber > 0;
+  const hasVerse = isVerse(citation.surahNumber, citation.ayahNumber);
 
-  if (hasVerse && ["quran", "tafsir", "translation"].includes(sourceType)) {
-    const verse = `${citation.surahNumber}:${citation.ayahNumber}`;
-    const englishSurahName = ENGLISH_SURAH_NAMES[citation.surahNumber - 1];
-    if (sourceType === "tafsir") {
-      if (language === "ar") {
-        const surahName = String(citation.surahName || "").replace(/^سورة\s*/u, "");
-        return surahName ? `(تفسير ${surahName} ${verse})` : `(تفسير القرآن ${verse})`;
-      }
-      return `(Tafsir on ${englishSurahName || `Quran ${citation.surahNumber}`} ${verse})`;
-    }
-    if (language === "ar") {
-      const surahName = String(citation.surahName || "").replace(/^سورة\s*/u, "");
-      return surahName ? `(${surahName} ${verse})` : `(القرآن ${verse})`;
-    }
-    return `(${englishSurahName || `Quran ${citation.surahNumber}`} ${verse})`;
+  if (hasVerse && VERSE_SOURCE_TYPES.includes(sourceType)) {
+    return buildVerseReference({
+      surahNumber: citation.surahNumber,
+      ayahNumber: citation.ayahNumber,
+      tafsir: sourceType === "tafsir",
+      language,
+      surahName: citation.surahName,
+    });
+  }
+
+  // Tafsir chunks carry their verses only in reference/references ("Quran 3:130–3:133").
+  const verseKeys = evidenceVerseKeys(evidence);
+  if (verseKeys.length) {
+    const [surahNumber, ayahNumber] = verseKeys[0].split(":").map(Number);
+    const sameSurah = verseKeys
+      .map((key) => key.split(":").map(Number))
+      .filter(([surah]) => surah === surahNumber)
+      .map(([, ayah]) => ayah);
+    const endAyah = Math.max(...sameSurah);
+    const consecutive = sameSurah.length === endAyah - Math.min(...sameSurah) + 1;
+    return buildVerseReference({
+      surahNumber,
+      ayahNumber: Math.min(...sameSurah),
+      endAyah: consecutive && sameSurah.length > 1 ? endAyah : null,
+      tafsir: sourceType === "tafsir",
+      language,
+    });
   }
 
   const title = citation.sourceTitle || citation.title;
@@ -140,4 +241,10 @@ module.exports = {
   buildCitations,
   buildInlineReference,
   buildInlineReferences,
+  buildVerseReference,
+  evidenceVerseKeys,
+  parseVerseReference,
+  isVerse,
+  ENGLISH_SURAH_NAMES,
+  ARABIC_SURAH_NAMES,
 };

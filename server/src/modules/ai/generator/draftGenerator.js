@@ -10,7 +10,16 @@ const {
   createDraft,
 } = require("../contracts/draftContract");
 
-const { buildCitations, buildInlineReferences } = require("../rag/citation/citationBuilder");
+const {
+  buildCitations,
+  buildInlineReferences,
+  buildVerseReference,
+  evidenceVerseKeys,
+  parseVerseReference,
+  isVerse,
+  ENGLISH_SURAH_NAMES,
+  ARABIC_SURAH_NAMES,
+} = require("../rag/citation/citationBuilder");
 
 const ENGLISH_ARABIC_TAFSIR_NOTICE =
   "This is an English explanation of the original Arabic source, not an English source quotation.";
@@ -54,63 +63,69 @@ function assertDraftLanguage(answer, language) {
   if (!matches) throw new DraftValidationError("Generated draft does not match the question language");
 }
 
-const VERSE_SOURCE_TYPES = ["quran", "tafsir", "translation"];
-// Longest same-surah range we expand verse by verse (Al-Baqarah has 286 ayahs).
-const MAX_EXPANDED_RANGE = 286;
-
-function isVerse(surahNumber, ayahNumber) {
-  return Number.isInteger(surahNumber) && surahNumber >= 1 && surahNumber <= 114 &&
-    Number.isInteger(ayahNumber) && ayahNumber >= 1;
+function hasOwnVerse(item) {
+  const citation = item?.citation || {};
+  return isVerse(citation.surahNumber, citation.ayahNumber);
 }
 
-/**
- * Verses listed in a reference string such as "Quran 2:163",
- * "Quran 3:130–3:133", "Quran 3:130-133" or "Quran 2:1, 2:3".
- */
-function parseVerseReference(reference) {
-  const keys = [];
-  const pattern = /(\d{1,3})\s*:\s*(\d{1,3})(?:\s*[–—-]\s*(?:(\d{1,3})\s*:\s*)?(\d{1,3}))?/gu;
-  for (const match of String(reference).matchAll(pattern)) {
-    const surah = Number(match[1]);
-    const ayah = Number(match[2]);
-    if (!isVerse(surah, ayah)) continue;
-    keys.push(`${surah}:${ayah}`);
-    if (match[4] === undefined) continue;
-    const endSurah = match[3] === undefined ? surah : Number(match[3]);
-    const endAyah = Number(match[4]);
-    if (endSurah === surah && endAyah > ayah && endAyah - ayah <= MAX_EXPANDED_RANGE) {
-      for (let next = ayah + 1; next <= endAyah; next += 1) keys.push(`${surah}:${next}`);
-    } else if (isVerse(endSurah, endAyah)) {
-      // A range across surahs: keep both ends; metadata.references lists the rest.
-      keys.push(`${endSurah}:${endAyah}`);
+const EASTERN_ARABIC_DIGITS = /[\u0660-\u0669\u06F0-\u06F9]/gu;
+function toAsciiDigits(text) {
+  return text.replace(EASTERN_ARABIC_DIGITS, (digit) => String(digit.charCodeAt(0) % 16));
+}
+
+function normalizeName(text) {
+  return toAsciiDigits(String(text))
+    .toLowerCase()
+    .replace(/[\u064B-\u0652\u0670\u0640]/gu, "") // tashkeel, dagger alef, tatweel
+    .replace(/[أإآٱ]/gu, "ا")
+    .replace(/ى/gu, "ي")
+    .replace(/ة/gu, "ه")
+    .replace(/[^\p{L}\p{N}:]+/gu, " ")
+    .replace(/\bal\s+/gu, "al")
+    .trim();
+}
+
+// Surah names in a form that survives transliteration and spelling variants.
+const SURAH_NAME_PATTERNS = [...ENGLISH_SURAH_NAMES, ...ARABIC_SURAH_NAMES]
+  .map((name, index) => ({ surahNumber: (index % 114) + 1, name: normalizeName(name) }))
+  .sort((a, b) => b.name.length - a.name.length)
+  .map(({ surahNumber, name }) => ({
+    surahNumber,
+    // The ayah number must follow the name: "البقرة 163", "البقرة، الآية 163", "Al-Baqarah, verse 163".
+    pattern: new RegExp(`(?:^|\\s)(?:سوره\\s+|surah\\s+)?${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s+(?:(?:الايه|ايه|ayah|aya|verse)\\s+)?(\\d{1,3})(?:\\s|$)`, "u"),
+  }));
+
+/** The verse a parenthetical marker cites by surah name + ayah ("البقرة، الآية 163"), or null. */
+function namedVerseKey(marker) {
+  const text = ` ${normalizeName(marker)} `;
+  for (const { surahNumber, pattern } of SURAH_NAME_PATTERNS) {
+    const match = text.match(pattern);
+    if (match && isVerse(surahNumber, Number(match[1]))) return `${surahNumber}:${Number(match[1])}`;
+  }
+  return null;
+}
+
+/** Every verse the answer cites in parentheses, by number ("2:163") or by surah name + ayah. */
+function citedVerseKeys(answer) {
+  const keys = new Set();
+  for (const [, inner] of answer.matchAll(/\(([^()]*)\)/gu)) {
+    const numbered = parseVerseReference(toAsciiDigits(inner));
+    numbered.forEach((key) => keys.add(key));
+    if (!numbered.length) {
+      const named = namedVerseKey(inner);
+      if (named) keys.add(named);
     }
   }
   return keys;
 }
 
-/**
- * Every verse an evidence item covers: its own surahNumber/ayahNumber, and for
- * tafsir chunks (which carry no surahNumber/ayahNumber) the verses in
- * metadata.references[] and the metadata.reference label.
- */
-function evidenceVerseKeys(item) {
-  const citation = item?.citation || {};
-  if (!VERSE_SOURCE_TYPES.includes(citation.sourceType || citation.category)) return [];
-  const keys = [];
-  if (isVerse(citation.surahNumber, citation.ayahNumber)) keys.push(`${citation.surahNumber}:${citation.ayahNumber}`);
-  for (const reference of Array.isArray(citation.references) ? citation.references : []) {
-    if (typeof reference === "string") keys.push(...parseVerseReference(reference));
-    else if (reference && isVerse(Number(reference.surahNumber), Number(reference.ayahNumber))) {
-      keys.push(`${Number(reference.surahNumber)}:${Number(reference.ayahNumber)}`);
-    }
-  }
-  if (typeof citation.reference === "string") keys.push(...parseVerseReference(citation.reference));
-  return [...new Set(keys)];
-}
-
-function hasOwnVerse(item) {
-  const citation = item?.citation || {};
-  return isVerse(citation.surahNumber, citation.ayahNumber);
+function canonicalVerseReference(key, marker, verseEvidence, language) {
+  const item = verseEvidence.find((candidate) => hasOwnVerse(candidate) &&
+    `${candidate.citation.surahNumber}:${candidate.citation.ayahNumber}` === key);
+  if (item) return buildInlineReferences([item], language)[0];
+  // A verse known only from a tafsir chunk's references.
+  const [surahNumber, ayahNumber] = key.split(":").map(Number);
+  return buildVerseReference({ surahNumber, ayahNumber, tafsir: /تفسير|tafsir/iu.test(marker), language });
 }
 
 function addEvidenceReferences(answer, evidence, language) {
@@ -118,18 +133,33 @@ function addEvidenceReferences(answer, evidence, language) {
   const knownVerseKeys = new Set(verseEvidence.flatMap(evidenceVerseKeys));
   const nonVerseLabels = evidence.filter((item) => !verseEvidence.includes(item)).flatMap(({ citation = {} }) => [citation.reference, citation.sourceTitle].filter(Boolean));
 
-  let normalized = answer.replace(/\(([^()]*?\d{1,3}\s*:\s*\d{1,3}[^()]*)\)/gu, (marker) => {
-    if (!knownVerseKeys.size || nonVerseLabels.some((label) => marker.includes(label))) return marker;
-    const match = marker.match(/(\d{1,3})\s*:\s*(\d{1,3})/u);
-    const key = `${Number(match[1])}:${Number(match[2])}`;
+  const normalizeMarker = (marker, key) => {
     if (!knownVerseKeys.has(key)) throw new DraftValidationError("Generated Quran reference is not present in the evidence");
-    const item = verseEvidence.find((candidate) => hasOwnVerse(candidate) &&
-      `${candidate.citation.surahNumber}:${candidate.citation.ayahNumber}` === key);
-    // A verse known only from a tafsir chunk's references keeps the model's marker.
-    return item ? buildInlineReferences([item], language)[0] : marker;
+    return canonicalVerseReference(key, marker, verseEvidence, language);
+  };
+
+  let normalized = answer.replace(/\(([^()]*)\)/gu, (marker, inner) => {
+    if (!knownVerseKeys.size || nonVerseLabels.some((label) => marker.includes(label))) return marker;
+    const asciiInner = toAsciiDigits(inner);
+    const match = asciiInner.match(/(\d{1,3})\s*:\s*(\d{1,3})/u);
+    if (match) return normalizeMarker(marker, `${Number(match[1])}:${Number(match[2])}`);
+    const named = namedVerseKey(inner);
+    return named ? normalizeMarker(marker, named) : marker;
   }).trim();
 
-  const missingReferences = buildInlineReferences(evidence, language).filter((reference) => !normalized.includes(reference));
+  // Append a reference only for evidence the draft does not already cite,
+  // matched by verse (any surah name or number + ayah), not by exact wording.
+  const cited = citedVerseKeys(normalized);
+  const missingReferences = [...new Set(evidence
+    .filter((item) => {
+      const keys = evidenceVerseKeys(item);
+      if (keys.length) return !keys.some((key) => cited.has(key));
+      const reference = buildInlineReferences([item], language)[0];
+      const label = item.citation?.reference;
+      return reference && !normalized.includes(reference) && !(label && normalized.includes(label));
+    })
+    .map((item) => buildInlineReferences([item], language)[0])
+    .filter(Boolean))];
   if (missingReferences.length) normalized = `${normalized} ${missingReferences.join(" ")}`.trim();
   return normalized;
 }
@@ -228,4 +258,5 @@ module.exports = {
   addEvidenceReferences,
   evidenceVerseKeys,
   parseVerseReference,
+  citedVerseKeys,
 };

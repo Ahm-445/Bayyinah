@@ -166,3 +166,46 @@ test("tafsir reference ranges expand to every verse they cover", () => {
   // Hadith references are never read as verses.
   assert.deepEqual(evidenceVerseKeys({ citation: { sourceType: "hadith", reference: "Book 2:13" } }), []);
 });
+
+test("inline references use Arabic surah names for Arabic and transliterated names for English", () => {
+  const { buildInlineReferences, ARABIC_SURAH_NAMES } = require("../rag/citation/citationBuilder");
+  assert.equal(ARABIC_SURAH_NAMES.length, 114);
+  const verse = (surahNumber, ayahNumber) => ({ citation: { sourceType: "quran", surahNumber, ayahNumber } });
+  // No surahName in the metadata: the name comes from the table, never "(القرآن 112:1)".
+  assert.deepEqual(buildInlineReferences([verse(112, 1)], "ar"), ["(الإخلاص 112:1)"]);
+  assert.deepEqual(buildInlineReferences([verse(112, 1)], "en"), ["(Al-Ikhlas 112:1)"]);
+  assert.deepEqual(buildInlineReferences([verse(1, 1), verse(2, 255), verse(107, 3), verse(114, 6)], "ar"),
+    ["(الفاتحة 1:1)", "(البقرة 2:255)", "(الماعون 107:3)", "(الناس 114:6)"]);
+  // Tafsir chunks that carry the verse only in reference/references.
+  assert.deepEqual(buildInlineReferences([tafsirA170], "ar"), ["(تفسير البقرة 2:163)"]);
+  assert.deepEqual(buildInlineReferences([tafsirA170], "en"), ["(Tafsir on Al-Baqarah 2:163)"]);
+  const range = { citation: { sourceType: "tafsir", reference: "Quran 3:130–3:133" } };
+  assert.deepEqual(buildInlineReferences([range], "ar"), ["(تفسير آل عمران 3:130–133)"]);
+});
+
+test("an Arabic draft is not given English references when its wording differs from the canonical form", async () => {
+  const cases = [
+    ["التوحيد إفراد الله بالعبادة (سورة البقرة، الآية 163).", [tafsirA170], "(البقرة 2:163)"],
+    ["التوحيد إفراد الله بالعبادة (البقرة ٢:١٦٣).", [tafsirA170], "(البقرة 2:163)"],
+    ["قل هو الله أحد (القرآن 112:1) وإلهكم إله واحد (البقرة 2:163).", [ikhlas1, tafsirA170], "(الإخلاص 112:1)"],
+  ];
+  for (const [text, evidence, expected] of cases) {
+    const generator = createDraftGenerator({ llmProvider: { async generate() { return text; } } });
+    const draft = await generator.generateDraft({ question: "ما معنى التوحيد؟", language: "ar", evidence });
+    assert.ok(draft.answer.includes(expected), draft.answer);
+    assert.doesNotMatch(draft.answer, /[A-Za-z]/u, `English leaked into: ${draft.answer}`);
+    assert.doesNotMatch(draft.answer, /القرآن \d/u);
+  }
+});
+
+test("uncited evidence is appended in the draft's language", async () => {
+  const arabic = createDraftGenerator({ llmProvider: { async generate() { return "التوحيد إفراد الله بالعبادة."; } } });
+  const arabicDraft = await arabic.generateDraft({ question: "ما معنى التوحيد؟", language: "ar", evidence: [tafsirA170] });
+  assert.equal(arabicDraft.answer, "التوحيد إفراد الله بالعبادة. (تفسير البقرة 2:163)");
+
+  const english = createDraftGenerator({ llmProvider: { async generate() {
+    return "Say: He is Allah, the One (Quran 112:1).";
+  } } });
+  const englishDraft = await english.generateDraft({ question: "What is tawhid?", language: "en", evidence: [ikhlas1] });
+  assert.match(englishDraft.answer, /\(Al-Ikhlas 112:1\)\.$/u, "cited once, not appended again");
+});
