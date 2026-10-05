@@ -54,13 +54,68 @@ function assertDraftLanguage(answer, language) {
   if (!matches) throw new DraftValidationError("Generated draft does not match the question language");
 }
 
+const VERSE_SOURCE_TYPES = ["quran", "tafsir", "translation"];
+// Longest same-surah range we expand verse by verse (Al-Baqarah has 286 ayahs).
+const MAX_EXPANDED_RANGE = 286;
+
+function isVerse(surahNumber, ayahNumber) {
+  return Number.isInteger(surahNumber) && surahNumber >= 1 && surahNumber <= 114 &&
+    Number.isInteger(ayahNumber) && ayahNumber >= 1;
+}
+
+/**
+ * Verses listed in a reference string such as "Quran 2:163",
+ * "Quran 3:130–3:133", "Quran 3:130-133" or "Quran 2:1, 2:3".
+ */
+function parseVerseReference(reference) {
+  const keys = [];
+  const pattern = /(\d{1,3})\s*:\s*(\d{1,3})(?:\s*[–—-]\s*(?:(\d{1,3})\s*:\s*)?(\d{1,3}))?/gu;
+  for (const match of String(reference).matchAll(pattern)) {
+    const surah = Number(match[1]);
+    const ayah = Number(match[2]);
+    if (!isVerse(surah, ayah)) continue;
+    keys.push(`${surah}:${ayah}`);
+    if (match[4] === undefined) continue;
+    const endSurah = match[3] === undefined ? surah : Number(match[3]);
+    const endAyah = Number(match[4]);
+    if (endSurah === surah && endAyah > ayah && endAyah - ayah <= MAX_EXPANDED_RANGE) {
+      for (let next = ayah + 1; next <= endAyah; next += 1) keys.push(`${surah}:${next}`);
+    } else if (isVerse(endSurah, endAyah)) {
+      // A range across surahs: keep both ends; metadata.references lists the rest.
+      keys.push(`${endSurah}:${endAyah}`);
+    }
+  }
+  return keys;
+}
+
+/**
+ * Every verse an evidence item covers: its own surahNumber/ayahNumber, and for
+ * tafsir chunks (which carry no surahNumber/ayahNumber) the verses in
+ * metadata.references[] and the metadata.reference label.
+ */
+function evidenceVerseKeys(item) {
+  const citation = item?.citation || {};
+  if (!VERSE_SOURCE_TYPES.includes(citation.sourceType || citation.category)) return [];
+  const keys = [];
+  if (isVerse(citation.surahNumber, citation.ayahNumber)) keys.push(`${citation.surahNumber}:${citation.ayahNumber}`);
+  for (const reference of Array.isArray(citation.references) ? citation.references : []) {
+    if (typeof reference === "string") keys.push(...parseVerseReference(reference));
+    else if (reference && isVerse(Number(reference.surahNumber), Number(reference.ayahNumber))) {
+      keys.push(`${Number(reference.surahNumber)}:${Number(reference.ayahNumber)}`);
+    }
+  }
+  if (typeof citation.reference === "string") keys.push(...parseVerseReference(citation.reference));
+  return [...new Set(keys)];
+}
+
+function hasOwnVerse(item) {
+  const citation = item?.citation || {};
+  return isVerse(citation.surahNumber, citation.ayahNumber);
+}
+
 function addEvidenceReferences(answer, evidence, language) {
-  const verseEvidence = evidence.filter((item) => {
-    const citation = item.citation || {};
-    return ["quran", "tafsir", "translation"].includes(citation.sourceType || citation.category) &&
-      Number.isInteger(citation.surahNumber) && Number.isInteger(citation.ayahNumber);
-  });
-  const knownVerseKeys = new Set(verseEvidence.map(({ citation }) => `${citation.surahNumber}:${citation.ayahNumber}`));
+  const verseEvidence = evidence.filter((item) => evidenceVerseKeys(item).length > 0);
+  const knownVerseKeys = new Set(verseEvidence.flatMap(evidenceVerseKeys));
   const nonVerseLabels = evidence.filter((item) => !verseEvidence.includes(item)).flatMap(({ citation = {} }) => [citation.reference, citation.sourceTitle].filter(Boolean));
 
   let normalized = answer.replace(/\(([^()]*?\d{1,3}\s*:\s*\d{1,3}[^()]*)\)/gu, (marker) => {
@@ -68,8 +123,10 @@ function addEvidenceReferences(answer, evidence, language) {
     const match = marker.match(/(\d{1,3})\s*:\s*(\d{1,3})/u);
     const key = `${Number(match[1])}:${Number(match[2])}`;
     if (!knownVerseKeys.has(key)) throw new DraftValidationError("Generated Quran reference is not present in the evidence");
-    const item = verseEvidence.find(({ citation }) => `${citation.surahNumber}:${citation.ayahNumber}` === key);
-    return buildInlineReferences([item], language)[0];
+    const item = verseEvidence.find((candidate) => hasOwnVerse(candidate) &&
+      `${candidate.citation.surahNumber}:${candidate.citation.ayahNumber}` === key);
+    // A verse known only from a tafsir chunk's references keeps the model's marker.
+    return item ? buildInlineReferences([item], language)[0] : marker;
   }).trim();
 
   const missingReferences = buildInlineReferences(evidence, language).filter((reference) => !normalized.includes(reference));
@@ -169,4 +226,6 @@ module.exports = {
   preserveEnglishTafsirNotice,
   assertDraftLanguage,
   addEvidenceReferences,
+  evidenceVerseKeys,
+  parseVerseReference,
 };

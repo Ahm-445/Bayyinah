@@ -103,3 +103,66 @@ test("non-Quran evidence uses its source reference without a surah:ayah citation
   assert.match(draft.answer, /\(Sahih al-Bukhari, Book 1, hadith 1\)/u);
   assert.doesNotMatch(draft.answer, /\d{1,3}:\d{1,3}/u);
 });
+
+// Shape of a real tafsir chunk after the 3d075ba parser fix: the verse is only
+// in metadata.reference / metadata.references (no surahNumber / ayahNumber).
+const tafsirA170 = {
+  sourceId: "quranpedia-tafsir-book-1",
+  chunkId: "quranpedia-tafsir-book-1-p1-pg25-a170-0123456789ab",
+  text: "وإلهكم إله واحد: إن إلهكم الذي يستحق العبادة إله واحد لا شريك له.",
+  score: 0.91,
+  citation: {
+    category: "tafsir",
+    sourceType: "tafsir",
+    sourceTitle: "تيسير التفسير",
+    language: "ar",
+    reference: "Quran 2:163",
+    references: [{ surahNumber: 2, ayahNumber: 163 }],
+    globalAyahNumbers: [170],
+  },
+};
+const ikhlas1 = {
+  sourceId: "quran-source",
+  chunkId: "quran-hafs-112-1",
+  text: "قُلْ هُوَ اللَّهُ أَحَدٌ",
+  score: 0.93,
+  citation: { sourceType: "quran", language: "ar", surahNumber: 112, ayahNumber: 1 },
+};
+
+test("a verse reference backed only by tafsir metadata.references is accepted", async () => {
+  for (const evidence of [[tafsirA170], [ikhlas1, tafsirA170]]) {
+    let calls = 0;
+    const generator = createDraftGenerator({ llmProvider: { async generate() {
+      calls += 1;
+      return "التوحيد هو إفراد الله بالعبادة، فإلهكم إله واحد لا إله إلا هو (البقرة 2:163).";
+    } } });
+    const draft = await generator.generateDraft({ question: "ما معنى التوحيد؟", language: "ar", evidence });
+    assert.match(draft.answer, /2:163/u);
+    assert.equal(calls, 1, "the first draft must be accepted without a retry");
+  }
+});
+
+test("a verse that is in neither the Quran evidence nor the tafsir references is still rejected", async () => {
+  for (const evidence of [[tafsirA170], [ikhlas1, tafsirA170]]) {
+    const generator = createDraftGenerator({ llmProvider: { async generate() {
+      return "التوحيد هو إفراد الله بالعبادة (الماعون 107:3).";
+    } } });
+    await assert.rejects(
+      generator.generateDraft({ question: "ما معنى التوحيد؟", language: "ar", evidence }),
+      /not present in the evidence/u
+    );
+  }
+});
+
+test("tafsir reference ranges expand to every verse they cover", () => {
+  const { evidenceVerseKeys, parseVerseReference } = require("./draftGenerator");
+  assert.deepEqual(parseVerseReference("Quran 3:130–3:133"), ["3:130", "3:131", "3:132", "3:133"]);
+  assert.deepEqual(parseVerseReference("Quran 3:130-133"), ["3:130", "3:131", "3:132", "3:133"]);
+  assert.deepEqual(parseVerseReference("Quran 2:286–3:1"), ["2:286", "3:1"]);
+  assert.deepEqual(evidenceVerseKeys({ citation: {
+    sourceType: "tafsir", reference: "Quran 3:130–3:133",
+    references: [{ surahNumber: 3, ayahNumber: 130 }, { surahNumber: 3, ayahNumber: 133 }],
+  } }), ["3:130", "3:133", "3:131", "3:132"]);
+  // Hadith references are never read as verses.
+  assert.deepEqual(evidenceVerseKeys({ citation: { sourceType: "hadith", reference: "Book 2:13" } }), []);
+});
