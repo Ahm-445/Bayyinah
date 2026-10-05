@@ -67,9 +67,10 @@ IMPORTANT RULES:
 14. Write about the topic, not about the evidence. Do not address the reader about the evidence or the request, e.g. do not write "The evidence you provided", "Based on the sources you shared", or "الأدلة التي قدمتها".
 15. Do not end with an offer or a question to the reader, e.g. do not write "If you'd like, I can also explain…", "Let me know if…", "إذا أحببت، أستطيع…" or "هل تريد…". End when the answer ends.
 16. Do not add a concluding or summary sentence unless every part of it is directly supported by the evidence above. Never close with a general moral, a broad generalisation, or a restatement that goes beyond the evidence.
+17. In an Arabic answer, never quote English text. Do not copy wording from an English translation (e.g. Saheeh International) or any other English source into the answer, in or out of quotation marks. If the Arabic Quran or hadith text is in the evidence, you may quote it verbatim; otherwise explain the meaning in your own Arabic words without quotation marks, followed by the reference, e.g. معنى الآية أن الله واحد لا شريك له (الإخلاص 112:1).
 
 Detected user language:
-${language === "ar" ? "Arabic (ar). Write the complete answer in Arabic." : "English (en). Write the complete answer in English."}
+${language === "ar" ? "Arabic (ar). Write the complete answer in Arabic, with no English quotations (rule 17)." : "English (en). Write the complete answer in English."}
 
 Seeker question:
 ${question}
