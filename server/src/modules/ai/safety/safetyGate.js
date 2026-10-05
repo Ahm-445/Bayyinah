@@ -76,6 +76,14 @@ function evaluateSafety(classification) {
     };
   }
 
+  if (action === AI_ACTIONS.ABSTAIN) {
+    return {
+      decision: SAFETY_DECISIONS.REVIEW,
+      reason:
+        "Question is outside the scope of Islamic sources; no answer is generated.",
+    };
+  }
+
   if (
     risk === RISK_LEVELS.HIGH ||
     action === AI_ACTIONS.REFER

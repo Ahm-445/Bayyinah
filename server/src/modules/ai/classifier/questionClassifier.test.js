@@ -58,4 +58,27 @@ for (const [text, language, category] of languageAndIntentCases) {
 }
 assert.strictEqual(classifyQuestion("ما تفسير بداية سورة الفاتحة؟").level, "B");
 
+// "should I / can I" is a personal-ruling request (Level D) only when the
+// question is about a religious matter; an off-topic personal question abstains.
+for (const text of ["Which phone should I buy?", "Can I use my wife's laptop?", "ماذا أفعل لأتعلم البرمجة؟"]) {
+  const offTopic = classifyQuestion(text);
+  assert.strictEqual(offTopic.action, "ABSTAIN", text);
+  assert.strictEqual(offTopic.level, "A", text);
+  assert.strictEqual(offTopic.risk, "low", text);
+  assert.strictEqual(offTopic.category, "other", text);
+}
+for (const text of [
+  "My father is not Muslim, can I attend his Christmas dinner?",
+  "Should I pray Witr before sleeping?",
+  "Can I eat gelatin?",
+  "ماذا أفعل إذا فاتتني صلاة الفجر؟",
+  "Is it permissible for me to do this?",
+]) {
+  const personal = classifyQuestion(text);
+  assert.strictEqual(personal.level, "D", text);
+  assert.strictEqual(personal.action, "REFER", text);
+}
+// "can i" no longer matches inside "can islam".
+assert.strictEqual(classifyQuestion("Can Islam and science coexist?").action, "ANSWER");
+
 console.log("Arabic question classifier tests: PASSED");

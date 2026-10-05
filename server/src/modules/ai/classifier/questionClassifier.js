@@ -3,7 +3,8 @@ const {
 } = require("../contracts/classificationContract");
 
 const { detectCategory } = require("./categoryDetector");
-const { detectLevel } = require("./levelDetector");
+const { detectLevel, isOffTopicPersonalQuestion } = require("./levelDetector");
+const { AI_ACTIONS } = require("../contracts/aiTypes");
 const { detectRisk } = require("./riskDetector");
 const { detectAction } = require("./actionDetector");
 const { detectLanguage } = require("./languageDetector");
@@ -31,12 +32,15 @@ function classifyQuestion(questionText) {
   const language = detectLanguage(questionText);
   const level = detectLevel(questionText);
   const risk = detectRisk(level);
-  const action = detectAction(level);
+  const offTopic = isOffTopicPersonalQuestion(questionText);
+  // A personal question with nothing religious in it is out of scope.
+  const action = offTopic ? AI_ACTIONS.ABSTAIN : detectAction(level);
 
   const reasons = [
     `Detected category: ${category}`,
     `Detected level: ${level}`,
     `Detected risk: ${risk}`,
+    ...(offTopic ? ["Personal question without a religious subject: outside the scope of Islamic sources"] : []),
     `Recommended action: ${action}`,
   ];
 

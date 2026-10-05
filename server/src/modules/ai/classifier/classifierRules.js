@@ -93,17 +93,25 @@ const CLASSIFIER_RULES = Object.freeze({
   }),
 
   indicators: Object.freeze({
-    personalCase: Object.freeze([
-        "in my case",
-        "in my situation",
-        "what should I do",
-        "what should i do",
+    // A personal religious ruling in any wording: always Level D.
+    personalRuling: Object.freeze([
         "is it permissible for me",
         "is it haram for me",
         "is it halal for me",
-        "can I",
+        "هل يجوز لي",
+        "هل يحل لي",
+        "هل يحرم علي",
+    ]),
+    // Personal wording that is Level D only when the question is about a
+    // religious matter (see religiousContext); "Which phone should I buy?" is not.
+    // English phrases match whole words: "can i" does not match "can islam".
+    personalCase: Object.freeze([
+        "in my case",
+        "in my situation",
+        "what should i do",
+        "is it allowed for me",
+        "am i allowed",
         "can i",
-        "should I",
         "should i",
         "my wife",
         "my husband",
@@ -115,14 +123,33 @@ const CLASSIFIER_RULES = Object.freeze({
         "في وضعي",
         "ماذا افعل",
         "ما الذي ينبغي لي",
-        "هل يجوز لي",
-        "هل يحل لي",
-        "هل يحرم علي",
         "زوجتي",
         "زوجي",
         "زواجي",
         "طلاقي",
         "عائلتي",
+    ]),
+    // Terms that make a personal question a religious one. Matched as whole
+    // words (Arabic allows the proclitics و ف ب ل ك ال), already normalized.
+    religiousContext: Object.freeze([
+        "islam", "islamic", "muslim", "muslims", "non-muslim", "allah", "god", "prophet",
+        "quran", "qur'an", "koran", "hadith", "sunnah", "sharia", "shariah", "fiqh", "fatwa",
+        "halal", "haram", "permissible", "impermissible", "makruh", "mahram", "sin", "sins", "sinful",
+        "religion", "religious", "deen", "pray", "praying", "prayer", "prayers", "salah", "salat",
+        "fast", "fasting", "ramadan", "zakat", "zakah", "hajj", "umrah", "wudu", "ablution",
+        "mosque", "masjid", "imam", "eid", "christmas", "easter", "church", "temple", "riba",
+        "alcohol", "wine", "beer", "pork", "hijab", "niqab", "marry", "marriage", "married",
+        "divorce", "nikah", "talaq", "iddah", "dua", "shirk", "jinn", "qibla", "adhan",
+        // Everyday topics people most often ask a ruling about.
+        "gelatin", "gelatine", "lard", "meat", "slaughter", "zabiha", "dhabiha", "music",
+        "tattoo", "tattoos", "gambling", "gamble", "lottery", "mortgage", "interest",
+        "dating", "girlfriend", "boyfriend", "zina",
+        "الله", "لله", "اسلام", "اسلامي", "مسلم", "مسلمه", "مسلمة", "مسلمين", "مسلمون", "حرام", "حلال",
+        "يجوز", "يحل", "يحرم", "حكم", "فتوي", "شرع", "شرعا", "شرعي", "صلاة", "صلاتي", "صلوات",
+        "صوم", "صيام", "رمضان", "زكاة", "حج", "عمرة", "وضوء", "مسجد", "نكاح", "زواج", "طلاق",
+        "اطلق", "اطلقها", "ربا", "خمر", "كنيسة", "كريسماس", "الميلاد", "كافر", "نبي", "رسول",
+        "قران", "حديث", "حجاب", "ذنب", "اثم",
+        "جيلاتين", "خنزير", "لحم", "ذبيحة", "موسيقي", "اغاني", "وشم", "قمار", "يانصيب", "فوائد", "قرض",
     ]),
     sensitiveOrDisputed: Object.freeze([
     "is it haram",

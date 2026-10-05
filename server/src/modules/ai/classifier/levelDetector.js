@@ -2,8 +2,55 @@ const { QUESTION_LEVELS } = require("../contracts/aiTypes");
 const { CLASSIFIER_RULES } = require("./classifierRules");
 const { normalizeText, containsIndicator } = require("./textNormalizer");
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /**
- * Detects whether a question appears to be a personal case.
+ * Whole-word match in normalized text. Arabic terms may carry the proclitics
+ * و ف ب ل ك and the article ال ("والصلاة", "بالحرام").
+ */
+function containsTerm(normalizedText, term) {
+  const needle = escapeRegExp(String(term).toLowerCase());
+  if (/[ء-ي]/.test(term)) {
+    return new RegExp(`(?:^|[^ء-ي])(?:[وف])?(?:[بلك])?(?:ال)?${needle}(?![ء-ي])`, "u").test(normalizedText);
+  }
+  return new RegExp(`(?<![a-z'])${needle}(?![a-z])`, "u").test(normalizedText);
+}
+
+function hasPersonalRulingIndicators(questionText) {
+  const normalizedText = normalizeText(questionText);
+  return CLASSIFIER_RULES.indicators.personalRuling.some((indicator) =>
+    containsIndicator(normalizedText, indicator)
+  );
+}
+
+function hasPersonalWording(questionText) {
+  const normalizedText = normalizeText(questionText);
+  return CLASSIFIER_RULES.indicators.personalCase.some((indicator) =>
+    /[ء-ي]/.test(indicator)
+      ? containsIndicator(normalizedText, indicator)
+      : containsTerm(normalizedText, indicator)
+  );
+}
+
+/**
+ * Whether the question is about a religious matter at all.
+ *
+ * @param {string} questionText
+ * @returns {boolean}
+ */
+function hasReligiousContext(questionText) {
+  const normalizedText = normalizeText(questionText);
+  return CLASSIFIER_RULES.indicators.religiousContext.some((term) =>
+    containsTerm(normalizedText, term)
+  );
+}
+
+/**
+ * Detects whether a question asks for a personal religious ruling
+ * (Level D). "Should I / can I / is it allowed for me" only counts when the
+ * question is about a religious matter.
  *
  * This is an initial safety signal, not a final decision.
  *
@@ -11,14 +58,19 @@ const { normalizeText, containsIndicator } = require("./textNormalizer");
  * @returns {boolean}
  */
 function hasPersonalCaseIndicators(questionText) {
-  const normalizedText = normalizeText(questionText);
+  return hasPersonalRulingIndicators(questionText) ||
+    (hasPersonalWording(questionText) && hasReligiousContext(questionText));
+}
 
-  const indicators =
-    CLASSIFIER_RULES.indicators.personalCase;
-
-  return indicators.some((indicator) =>
-    containsIndicator(normalizedText, indicator)
-  );
+/**
+ * A personal question ("Which phone should I buy?") with nothing religious
+ * in it: outside Bayyinah's scope, so the AI abstains.
+ *
+ * @param {string} questionText
+ * @returns {boolean}
+ */
+function isOffTopicPersonalQuestion(questionText) {
+  return hasPersonalWording(questionText) && !hasPersonalCaseIndicators(questionText);
 }
 
 /**
@@ -102,6 +154,8 @@ function detectLevel(questionText) {
 
 module.exports = {
   hasPersonalCaseIndicators,
+  hasReligiousContext,
+  isOffTopicPersonalQuestion,
   hasSensitiveOrDisputedIndicators,
   hasExplanationIndicators,
   detectLevel,

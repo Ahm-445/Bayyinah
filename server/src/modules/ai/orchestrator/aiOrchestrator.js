@@ -136,6 +136,18 @@ function createAIOrchestrator({
       });
     }
 
+    // Out-of-scope question: abstain without retrieval or a draft.
+    if (classification.action === AI_ACTIONS.ABSTAIN) {
+      return createAIResult({
+        action: AI_ACTIONS.ABSTAIN,
+        classification,
+        safety,
+        evidence: [],
+        draft: null,
+        verification: null,
+      });
+    }
+
     // 4. Retrieval
     const evidence =
       await retriever.retrieve(text, {

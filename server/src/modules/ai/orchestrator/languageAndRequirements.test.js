@@ -132,3 +132,25 @@ test("Arabic Quran and hadith request proceeds only with sufficient evidence for
   assert.equal(result.action, "ANSWER");
   assert.equal(calls.generation, 1);
 });
+
+test("an off-topic personal question abstains without retrieval; a religious one is referred", async () => {
+  const { orchestrator, calls } = createOrchestrator({ evidence: [quranEvidence] });
+  const phone = await orchestrator.processQuestion({ questionId: "q-phone", text: "Which phone should I buy?" });
+  assert.equal(phone.action, "ABSTAIN");
+  assert.equal(phone.classification.level, "A");
+  assert.equal(phone.safety.decision, "REVIEW");
+  assert.deepEqual(phone.evidence, []);
+  assert.equal(phone.draft, null);
+  assert.equal(phone.verification, null);
+  assert.equal(calls.retrievalOptions, null, "no retrieval for an off-topic question");
+  assert.equal(calls.generation, 0);
+
+  const christmas = await orchestrator.processQuestion({
+    questionId: "q-christmas",
+    text: "My father is not Muslim, can I attend his Christmas dinner?",
+  });
+  assert.equal(christmas.action, "REFER");
+  assert.equal(christmas.classification.level, "D");
+  assert.equal(christmas.safety.decision, "BLOCK");
+  assert.equal(christmas.draft, null);
+});
