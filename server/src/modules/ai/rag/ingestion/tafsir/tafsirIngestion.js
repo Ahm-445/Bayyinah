@@ -1,22 +1,22 @@
 const { parseTafsirFile } = require("./tafsirParser");
-const { createTafsirSource, buildTafsirChunk, SOURCE_ID } = require("./tafsirChunkBuilder");
+const { createTafsirSource, buildTafsirChunks } = require("./tafsirChunkBuilder");
 
 const COLLECTION_NAME = "knowledge_chunks";
 const DEFAULT_BATCH_SIZE = 8;
 const EMBEDDING_DIMENSIONS = 1024;
 
-function prepareTafsirIngestion({ filePath }) {
-  const parsed = parseTafsirFile(filePath);
-  const source = createTafsirSource({ version: parsed.license.version, usageBasis: parsed.license.en });
-  const chunks = parsed.blocks.map((block) => buildTafsirChunk(block, source));
+function prepareTafsirIngestion({ filePath, bookId = 1 }) {
+  const parsed = parseTafsirFile(filePath, { expectedBookId: bookId });
+  const source = createTafsirSource({ version: parsed.license.version, usageBasis: parsed.license.en, bookId });
+  const chunks = parsed.blocks.flatMap((block) => buildTafsirChunks(block, source));
   return { parsed, source, chunks };
 }
 
-async function ingestTafsir({ filePath, db, embeddingProvider, batchSize = DEFAULT_BATCH_SIZE, dryRun = false }) {
+async function ingestTafsir({ filePath, bookId = 1, db, embeddingProvider, batchSize = DEFAULT_BATCH_SIZE, dryRun = false }) {
   if (!Number.isInteger(batchSize) || batchSize < 1) throw new Error("batchSize must be a positive integer");
-  const { parsed, source, chunks } = prepareTafsirIngestion({ filePath });
+  const { parsed, source, chunks } = prepareTafsirIngestion({ filePath, bookId });
   if (dryRun) {
-    return { sourceId: source.sourceId, sourceVersion: source.version, book: parsed.book.name, author: parsed.book.author.full_name, ayahRows: parsed.ayahRows, planned: chunks.length, written: 0, dryRun: true };
+    return { sourceId: source.sourceId, sourceVersion: source.version, book: parsed.book.name, author: parsed.book.author.full_name, ayahRows: parsed.ayahRows, passages: parsed.blocks.length, planned: chunks.length, characters: chunks.reduce((total, chunk) => total + chunk.text.length, 0), written: 0, dryRun: true };
   }
   if (!db || typeof db.collection !== "function") throw new Error("MongoDB database instance is required");
   if (!embeddingProvider || typeof embeddingProvider.embedBatch !== "function") throw new Error("Batch embedding provider is required");
@@ -43,9 +43,9 @@ async function ingestTafsir({ filePath, db, embeddingProvider, batchSize = DEFAU
     written += batch.length;
     console.log(`Tafsir ingestion: ${written}/${chunks.length}`);
   }
-  const storedCount = await collection.countDocuments({ sourceId: SOURCE_ID });
+  const storedCount = await collection.countDocuments({ sourceId: source.sourceId });
   if (storedCount !== chunks.length) throw new Error(`Expected ${chunks.length} tafsir chunks in MongoDB, found ${storedCount}`);
-  const invalidDimensions = await collection.countDocuments({ sourceId: SOURCE_ID, dimensions: { $ne: EMBEDDING_DIMENSIONS } });
+  const invalidDimensions = await collection.countDocuments({ sourceId: source.sourceId, dimensions: { $ne: EMBEDDING_DIMENSIONS } });
   if (invalidDimensions) throw new Error(`Found ${invalidDimensions} tafsir chunks with invalid embedding dimensions`);
   return { sourceId: source.sourceId, sourceVersion: source.version, book: parsed.book.name, author: parsed.book.author.full_name, ayahRows: parsed.ayahRows, planned: chunks.length, written, storedCount, invalidDimensions, dryRun: false };
 }

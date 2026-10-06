@@ -28,13 +28,13 @@ function htmlToText(value) {
     .trim();
 }
 
-function parseTafsirData(data, { expectedAyahCount = EXPECTED_AYAH_COUNT } = {}) {
+function parseTafsirData(data, { expectedAyahCount = EXPECTED_AYAH_COUNT, expectedBookId = 1 } = {}) {
   if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("Tafsir document must be an object");
   if (!data.license || typeof data.license !== "object" || !data.license.version || !data.license.en) {
     throw new Error("Tafsir document is missing license usage terms or version");
   }
-  if (!data.book || Number(data.book.id) !== 1 || !data.book.name || !data.book.author?.full_name) {
-    throw new Error("Expected Quranpedia tafsir book 1 metadata");
+  if (!data.book || Number(data.book.id) !== Number(expectedBookId) || !data.book.name || !data.book.author?.full_name) {
+    throw new Error(`Expected Quranpedia tafsir book ${expectedBookId} metadata`);
   }
   if (data.book.language?.code !== "ar") throw new Error(`Expected Arabic tafsir, got ${data.book.language?.code}`);
   if (!Array.isArray(data.ayahs) || data.ayahs.length !== expectedAyahCount) {
