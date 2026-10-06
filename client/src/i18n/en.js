@@ -113,7 +113,6 @@ export default {
     subtitle: 'Every answer is reviewed and approved by a qualified dāʿī before you see it.',
     label: 'Your question',
     placeholder: 'For example: What do Muslims believe about God?',
-    empty: 'Please write your question.',
     tooLong: 'Please shorten your question to {max} characters.',
     privacy: 'Please do not include personal details such as your name or contact information.',
     send: 'Send question',
