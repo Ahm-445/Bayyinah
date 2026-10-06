@@ -14,6 +14,17 @@ Islamic AI Challenge 2026, track 04: knowledge and verification tools for people
 > Render's free plan puts the backend to sleep when idle. Open the health link first and wait for
 > `"status":"ok"` (up to a minute) before trying the app.
 
+## Demo accounts (live app)
+
+| Role | Username | Password |
+|---|---|---|
+| Dāʿī: reviews AI drafts, edits and publishes answers | `khalid`, `maryam` | `demo1234` |
+| Admin: sees every dāʿī's drafts; manages the source registry through the API | `admin` | `demo1234` |
+| Asker | register on the site: any username (3–32 characters) and a password of 8+ characters | your own |
+
+These are demo accounts with no real data, and they unlock no key. Please leave the sources switched on: an admin can
+switch a source off, and the AI then stops using it.
+
 ## The problem
 
 - A **non-Muslim asker** rarely gets an easy, sourced answer: public platforms give unsourced or hostile replies,
@@ -57,12 +68,13 @@ How each source is used and verified, with its usage terms: [docs/source-registr
 
 ## Keys and secrets
 
-**No key, password or connection string is in this repository.** Each one is read from environment variables:
+**No API key, secret or connection string is in this repository** (the only passwords written here are the public
+demo accounts above). Each one is read from environment variables:
 `server/.env` on your machine (git-ignored; copy [`.env.example`](.env.example)) or the service's
 *Environment* settings on Render. The frontend never holds a secret; only the backend calls paid APIs.
 
-The live demo above runs on the team's own keys. To run your own copy, create the keys below. Judges who need
-temporary test credentials or the demo dāʿī accounts can ask the team; they are shared privately, never here.
+The live demo above runs on the team's own keys, so judges need none to try it. To run your own copy, create the keys
+below.
 
 ### Backend (`server/.env`)
 
