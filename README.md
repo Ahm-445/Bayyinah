@@ -55,50 +55,131 @@ sees has been reviewed and published by a person.
 
 How each source is used and verified, with its usage terms: [docs/source-registry.md](docs/source-registry.md).
 
-## Run it locally
+## Keys and secrets
 
-Requirements: Node.js 22, a MongoDB Atlas database (Vector Search is needed for real AI mode).
+**No key, password or connection string is in this repository.** Each one is read from environment variables:
+`server/.env` on your machine (git-ignored; copy [`.env.example`](.env.example)) or the service's
+*Environment* settings on Render. The frontend never holds a secret; only the backend calls paid APIs.
 
-### Backend
+The live demo above runs on the team's own keys. To run your own copy, create the keys below. Judges who need
+temporary test credentials or the demo dāʿī accounts can ask the team; they are shared privately, never here.
+
+### Backend (`server/.env`)
+
+| Variable | Needed for | Where to get it / value |
+|---|---|---|
+| `MONGODB_URI` | Always: app data, knowledge base, vector search | [MongoDB Atlas](https://www.mongodb.com/docs/atlas/getting-started/): create a cluster → *Database Access* (add a user) → *Network Access* (allow your IP) → *Connect* → *Drivers* → copy the `mongodb+srv://…` string |
+| `MONGODB_DB_NAME` | Optional | Database name, default `bayyinah` |
+| `JWT_SECRET` | Required in production | Any long random string: `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"` |
+| `SEED_PASSWORD` | Required in production | Password you choose for the seeded dāʿī/admin accounts (`npm run seed`) |
+| `OPENAI_API_KEY` | Real AI (default provider) | [OpenAI platform → API keys](https://platform.openai.com/api-keys). Model used: `gpt-5.4-mini` |
+| `LLM_PROVIDER`, `GEMINI_API_KEY` | Optional alternative to OpenAI | Set `LLM_PROVIDER=gemini` and a key from [Google AI Studio](https://aistudio.google.com/apikey). Model used: `gemini-3.1-flash-lite` |
+| `VOYAGE_API_KEY` | Real AI (embeddings for retrieval) | Voyage AI by MongoDB: in Atlas, *Services → AI Model APIs → Model API Keys → Create model API key* ([guide](https://www.mongodb.com/docs/voyageai/management/api-keys/)). Model used: `voyage-4-large` |
+| `VOYAGE_EMBEDDING_MODEL` | Optional | Default `voyage-4-large`; must match the model the knowledge base was embedded with |
+| `AI_MODE` | Optional | `real` or `mock`; empty = `real` when the AI keys exist, else `mock` (canned, labelled results, no keys needed) |
+| `CLIENT_ORIGIN` | Production | Frontend URL(s) allowed by CORS, comma separated (default in production: the Render frontend) |
+| `NODE_ENV`, `PORT`, `TRUST_PROXY`, `AI_TIMEOUT_MS`, `RATE_LOGIN_MAX`, `RATE_REGISTER_MAX`, `RATE_QUESTIONS_MAX`, `MOCK_AI_DELAY_MS` | Optional | Explained in [`.env.example`](.env.example) |
+| `RUN_LIVE_AI_TESTS`, `RUN_LIVE_TAFSIR_TESTS`, `RUN_LIVE_HADITH_TESTS`, `RUN_LIVE_KNOWLEDGE_E2E`, `KNOWLEDGE_E2E_CASE`, `SAHEEH_TRANSLATION_SOURCE_URL`, `SAHEEH_TRANSLATION_SOURCE_VERSION` | Live tests only | Set by the `npm run test:*-workflow` / `validate:*` scripts; see [docs/testing.md](docs/testing.md) |
+
+### Frontend (`client/.env.local`, no secrets)
+
+| Variable | Value |
+|---|---|
+| `VITE_USE_MOCKS` | `false` to use the backend, `true` for the in-browser mock API |
+| `VITE_API_BASE_URL` | `/api` locally; the backend's full URL for a deployed build (e.g. `https://bayyinah-eteb.onrender.com/api`) |
+| `VITE_API_PROXY_TARGET` | Local dev only: where `/api` is proxied (default `http://localhost:5000`) |
+
+## External APIs and services
+
+| Service | Used for | Called from | Documentation |
+|---|---|---|---|
+| OpenAI Responses API | Drafting answers and claim-level verification | Backend (`server/src/modules/ai/providers/openaiLLMProvider.js`) | [API reference](https://developers.openai.com/api/reference/resources/responses) |
+| Google Gemini API (optional) | Same, when `LLM_PROVIDER=gemini` | Backend (`geminiLLMProvider.js`) | [Gemini API docs](https://ai.google.dev/gemini-api/docs) |
+| Voyage AI embeddings (`https://ai.mongodb.com/v1/embeddings`) | Embedding questions and source chunks | Backend (`voyageEmbeddingProvider.js`) and ingestion scripts | [Voyage AI by MongoDB](https://www.mongodb.com/docs/voyageai/) |
+| MongoDB Atlas + Atlas Vector Search | Database and semantic search over `knowledge_chunks` | Backend | [Atlas Vector Search](https://www.mongodb.com/docs/atlas/atlas-vector-search/) |
+| Render | Hosting of the backend and the static frontend | `render.yaml` | [Render docs](https://render.com/docs) |
+| Google Fonts | Arabic fonts (Amiri, IBM Plex Sans Arabic, Noto Naskh Arabic) | Browser | [fonts.google.com](https://fonts.google.com/) |
+
+External data sources (downloaded once at ingestion time, not called at runtime):
+[Quranpedia.net dumps](https://quranpedia.net/dumps) (Qur'an text, Saheeh International translation, tafsir) and
+[AhmedBaset/hadith-json v1.2.0](https://github.com/AhmedBaset/hadith-json/tree/v1.2.0) (Sahih al-Bukhari, Sahih Muslim,
+from Sunnah.com). Hadith evidence links to [sunnah.com](https://sunnah.com). Details and usage terms:
+[docs/source-registry.md](docs/source-registry.md).
+
+## Run it
+
+Requirements: Node.js 22 and npm. For real AI mode: a MongoDB Atlas cluster, an OpenAI (or Gemini) key and a
+Voyage AI key (see [Keys and secrets](#keys-and-secrets)).
+
+### Quick start without AI keys (mock mode)
 
 ```bash
+# Backend: only MONGODB_URI is needed; AI results are canned and labelled
 cd server
 npm install
-cp ../.env.example .env    # set MONGODB_URI and JWT_SECRET; add OPENAI_API_KEY + VOYAGE_API_KEY for real AI
-npm run seed               # dāʿī/admin accounts (khalid, maryam, admin) and the source registry
-npm run dev                # http://localhost:5000/api/health
-```
+cp ../.env.example .env        # fill MONGODB_URI
+npm run seed                   # accounts khalid, maryam, admin (password: SEED_PASSWORD, or demo1234 outside production)
+npm run dev                    # http://localhost:5000/api/health → "ai":"mock"
 
-Without the AI keys the server starts in `AI_MODE=mock` with clearly labelled canned results.
-Real AI mode also needs the knowledge base ingested into `knowledge_chunks`
-(commands in [docs/source-registry.md](docs/source-registry.md#ingestion-commands)).
-
-### Frontend
-
-```bash
+# Frontend (second terminal)
 cd client
 npm install
-cp .env.example .env.local # VITE_USE_MOCKS=false to use the backend above
-npm run dev                # http://localhost:5173 (proxies /api to localhost:5000)
+cp .env.example .env.local     # set VITE_USE_MOCKS=false
+npm run dev                    # http://localhost:5173
 ```
 
-With `VITE_USE_MOCKS=true` the frontend runs on an in-browser mock API with no backend.
+Frontend only, no backend at all: keep `VITE_USE_MOCKS=true` in `client/.env.local`.
+
+### Full setup with real AI
+
+1. **Keys**: fill `MONGODB_URI`, `JWT_SECRET`, `OPENAI_API_KEY` (or `LLM_PROVIDER=gemini` + `GEMINI_API_KEY`) and
+   `VOYAGE_API_KEY` in `server/.env`, then `cd server && npm install`.
+2. **Knowledge base** (embeds every chunk with Voyage; run once, from `server/`):
+   ```bash
+   # Qur'an and tafsir: the dumps are already in server/data/
+   node src/modules/ai/rag/ingestion/quran/quranFullIngestion.js
+   node src/modules/ai/rag/ingestion/tafsir/tafsirFullIngestion.js
+
+   # Saheeh International: download "1947.json" (translation 1947) from https://quranpedia.net/dumps
+   node src/modules/ai/rag/ingestion/translations/saheehInternationalFullIngestion.js \
+     --file <path>/1947.json --source-url https://quranpedia.net/ --source-version <dump version> \
+     --usage-basis "Quranpedia usage terms" --approved
+
+   # Bukhari and Muslim (hadith-json v1.2.0)
+   curl -LO https://raw.githubusercontent.com/AhmedBaset/hadith-json/v1.2.0/db/by_book/the_9_books/bukhari.json
+   curl -LO https://raw.githubusercontent.com/AhmedBaset/hadith-json/v1.2.0/db/by_book/the_9_books/muslim.json
+   node src/modules/ai/rag/ingestion/hadith/hadithFullIngestion.js --bukhari-file bukhari.json \
+     --muslim-file muslim.json --source-version v1.2.0 --usage-basis "hadith-json v1.2.0" --approved
+   ```
+   Add `--dry-run` to the translation, tafsir and hadith commands to validate files without API calls or writes.
+3. **Vector index** on `knowledge_chunks`, once the collection has data (`knowledge_chunks_vector_index`: 1024 dimensions, cosine, filters on
+   `metadata.approved`, `metadata.category`, `metadata.language`, `metadata.languages`):
+   ```bash
+   node src/modules/ai/rag/storage/vectorIndex.test.js   # creates the index, or reports it exists
+   ```
+4. **Accounts and source registry**: `npm run seed`.
+5. **Start**: `npm run dev` (backend) and the frontend as in the quick start. `/api/health` shows `"ai":"real"`.
+6. **Try it**: register a questioner, ask a question (examples in [docs/demo-script.md](docs/demo-script.md)), then
+   log in as `khalid` to review the draft.
 
 ### Tests
 
 ```bash
-cd server && npm run test:ai        # 79 offline AI tests, no keys needed
-cd server && npm run test:backend   # API integration tests (needs MONGODB_URI) + citation tests
+cd server && npm run test:ai        # offline AI tests, no keys needed
+cd server && npm run test:backend   # API integration tests (needs MONGODB_URI; uses the throw-away "bayyinah_test")
 cd client && npm run lint && npm run build
 ```
 
-Live end-to-end checks are listed in [docs/testing.md](docs/testing.md).
+Live end-to-end checks (use your keys and credit) are listed in [docs/testing.md](docs/testing.md).
 
-### Deploy
+### Deploy (Render)
 
-`render.yaml` describes both services on Render: the backend (`server/`, `npm start`) and the static frontend
-(`client/`, `npm run build`, rewrite `/*` → `/index.html`). Backend environment: `NODE_ENV=production`,
-`MONGODB_URI`, `JWT_SECRET`, `SEED_PASSWORD`, `OPENAI_API_KEY`, `VOYAGE_API_KEY`, `CLIENT_ORIGIN`.
+[`render.yaml`](render.yaml) describes both services: the backend (`server/`, `npm ci`, `npm start`, health check
+`/api/health`) and the static frontend (`client/`, `npm ci && npm run build`, publish `dist`, rewrite `/*` →
+`/index.html`). Put the backend variables from [Keys and secrets](#keys-and-secrets) in the backend service's
+*Environment* (`NODE_ENV=production`, `MONGODB_URI`, `JWT_SECRET`, `SEED_PASSWORD`, `OPENAI_API_KEY`,
+`VOYAGE_API_KEY`, `CLIENT_ORIGIN`) and `VITE_USE_MOCKS=false`, `VITE_API_BASE_URL=<backend URL>/api` in the
+frontend's. Run `npm run seed` once against the production database.
 
 ## Repository
 
