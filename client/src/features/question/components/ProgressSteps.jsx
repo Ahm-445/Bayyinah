@@ -21,17 +21,17 @@ export default function ProgressSteps({ status }) {
           <li key={step.key} className="flex items-center gap-3" aria-current={active ? 'step' : undefined}>
             <span
               aria-hidden
-              className={`flex size-6 items-center justify-center rounded-full text-xs font-semibold ${
+              className={`flex size-7 items-center justify-center rounded-full text-xs font-semibold ${
                 done
-                  ? 'bg-emerald-600 text-white'
+                  ? 'bg-accent text-white'
                   : active
-                    ? 'bg-emerald-100 text-emerald-800 ring-2 ring-emerald-600 motion-safe:animate-pulse'
-                    : 'bg-stone-200 text-stone-500'
+                    ? 'bg-mint text-brand ring-2 ring-accent motion-safe:animate-pulse'
+                    : 'bg-black/10 text-ink-soft'
               }`}
             >
               {done ? '✓' : index + 1}
             </span>
-            <span className={active ? 'font-medium text-stone-900' : done ? 'text-stone-700' : 'text-stone-500'}>
+            <span className={active ? 'font-semibold text-ink' : done ? 'text-ink-soft' : 'text-ink-soft'}>
               {t(`question.progress.${step.key}`)}
             </span>
           </li>

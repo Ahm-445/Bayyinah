@@ -3,10 +3,13 @@ import { useI18n } from '../../i18n/core.js'
 import { getAuth } from '../../services/session.js'
 import { ROLE } from '../../shared/lib/enums.js'
 import { useLogout } from '../useLogout.js'
+import AppFooter from './AppFooter.jsx'
 import AppHeader from './AppHeader.jsx'
 
 const navClass = ({ isActive }) =>
-  isActive ? 'font-medium text-stone-950' : 'text-stone-600 hover:text-stone-950'
+  isActive
+    ? 'inline-flex min-h-9 items-center font-semibold text-brand underline decoration-2 underline-offset-8'
+    : 'inline-flex min-h-9 items-center font-semibold text-ink hover:text-accent'
 
 export default function DaeeLayout() {
   const { t } = useI18n()
@@ -14,8 +17,11 @@ export default function DaeeLayout() {
   const user = getAuth()?.user
 
   return (
-    <div className="min-h-screen">
-      <AppHeader homeTo="/daee">
+    <div className="flex min-h-screen flex-col">
+      <AppHeader>
+        <span dir="auto" className="text-ink-soft">
+          {user?.displayName}
+        </span>
         <NavLink to="/daee" end className={navClass}>
           {t('nav.queue')}
         </NavLink>
@@ -24,16 +30,14 @@ export default function DaeeLayout() {
             {t('nav.evaluation')}
           </NavLink>
         )}
-        <span dir="auto" className="text-stone-500">
-          {user?.displayName}
-        </span>
-        <button type="button" onClick={handleLogout} className="text-stone-600 hover:text-stone-950">
+        <button type="button" onClick={handleLogout} className="btn btn-sm btn-dark-outline">
           {t('nav.signOut')}
         </button>
       </AppHeader>
-      <main className="mx-auto max-w-6xl px-4 py-8">
+      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
         <Outlet />
       </main>
+      <AppFooter />
     </div>
   )
 }

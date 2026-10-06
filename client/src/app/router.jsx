@@ -2,13 +2,13 @@ import { createBrowserRouter } from 'react-router'
 import I18nProvider from '../i18n/I18nProvider.jsx'
 import AdminEvalPage from '../features/admin-eval/pages/AdminEvalPage.jsx'
 import AskPage from '../features/ask/pages/AskPage.jsx'
+import HomePage from '../features/home/pages/HomePage.jsx'
 import LoginPage from '../features/auth/pages/LoginPage.jsx'
 import RegisterPage from '../features/auth/pages/RegisterPage.jsx'
 import QueuePage from '../features/daee-queue/pages/QueuePage.jsx'
 import DraftReviewPage from '../features/draft-review/pages/DraftReviewPage.jsx'
 import QuestionPage from '../features/question/pages/QuestionPage.jsx'
 import { ROLE } from '../shared/lib/enums.js'
-import HomeRedirect from './HomeRedirect.jsx'
 import AuthLayout from './layouts/AuthLayout.jsx'
 import DaeeLayout from './layouts/DaeeLayout.jsx'
 import QuestionerLayout from './layouts/QuestionerLayout.jsx'
@@ -28,7 +28,7 @@ export const router = createBrowserRouter([
         element: <AuthLayout />,
         errorElement: <RouteError />,
         children: [
-          { index: true, element: <HomeRedirect /> },
+          { index: true, element: <HomePage /> },
           { path: 'login', element: <LoginPage /> },
           { path: 'register', element: <RegisterPage /> },
           { path: '*', element: <NotFoundPage /> },

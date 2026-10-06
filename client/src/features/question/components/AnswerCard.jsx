@@ -10,30 +10,31 @@ export default function AnswerCard({ answer, index, showNumber, selected, canSel
   const { t, locale } = useI18n()
   return (
     <article
-      className={`flex flex-col rounded-lg border bg-white p-5 ${
-        selected ? 'border-emerald-500 ring-2 ring-emerald-500/30' : 'border-stone-200'
+      className={`flex flex-col rounded-card p-5 sm:p-6 ${
+        // Gold marks the chosen answer, and nothing else in the interface.
+        selected ? 'bg-gold-wash ring-2 ring-gold' : 'bg-white shadow-card'
       }`}
     >
       <header className="flex flex-wrap items-center justify-between gap-2">
         <div>
           {showNumber && <h3 className="font-semibold">{t('answers.answerN', { n: index + 1 })}</h3>}
-          <p className="text-sm text-stone-600">{t('answers.by', { name: answer.daee.displayName })}</p>
+          <p className="text-sm text-ink-soft">{t('answers.by', { name: answer.daee.displayName })}</p>
         </div>
-        <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-emerald-600/20 ring-inset">
+        <span className="chip bg-mint text-brand">
           {t('answers.approved')}
         </span>
       </header>
 
-      <p dir="auto" className="mt-4 flex-1 leading-relaxed whitespace-pre-wrap text-stone-800">
+      <p dir="auto" className="mt-4 flex-1 leading-relaxed whitespace-pre-wrap text-ink">
         {answer.finalText}
       </p>
 
-      <footer className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-3">
-        <span className="text-xs text-stone-500" title={fullDate(answer.publishedAt, locale)}>
+      <footer className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-black/10 pt-4">
+        <span className="text-xs text-ink-soft" title={fullDate(answer.publishedAt, locale)}>
           {answer.publishedAt && t('answers.published', { time: timeAgo(answer.publishedAt, { locale }) })}
         </span>
         {selected ? (
-          <span className="rounded bg-emerald-100 px-2.5 py-1 text-sm font-medium text-emerald-800">
+          <span className="chip bg-gold px-3 py-1 text-sm text-house">
             {t('answers.yourChoice')}
           </span>
         ) : (
@@ -41,7 +42,7 @@ export default function AnswerCard({ answer, index, showNumber, selected, canSel
             <button
               type="button"
               onClick={() => onSelect(answer)}
-              className="rounded bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+              className="btn btn-primary"
             >
               {t('answers.select')}
             </button>

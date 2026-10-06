@@ -11,10 +11,10 @@ export default function EvidenceCard({ evidence, cited = false, action = null })
   const { t } = useI18n()
   const textProps = textDirProps(evidence.text)
   return (
-    <article className="rounded-lg border border-stone-200 bg-white p-4">
-      <div className="flex items-center justify-between gap-2 text-xs text-stone-500">
+    <article className="card p-5">
+      <div className="flex items-center justify-between gap-2 text-xs text-ink-soft">
         {evidence.reference ? (
-          <span {...textDirProps(evidence.reference)} className="text-sm text-stone-700">
+          <span {...textDirProps(evidence.reference)} className="text-sm font-semibold text-brand">
             {evidence.reference}
           </span>
         ) : (
@@ -22,12 +22,12 @@ export default function EvidenceCard({ evidence, cited = false, action = null })
         )}
         <span className="flex items-center gap-1.5">
           {evidence.hadithGrade && (
-            <span className="rounded bg-sky-50 px-1.5 py-0.5 font-medium text-sky-800">
+            <span className="chip bg-ceramic text-ink-soft">
               {t('review.hadithGrade', { grade: evidence.hadithGrade })}
             </span>
           )}
           {cited && (
-            <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-medium text-emerald-700">
+            <span className="chip bg-mint text-brand">
               {t('review.cited')}
             </span>
           )}
@@ -35,13 +35,13 @@ export default function EvidenceCard({ evidence, cited = false, action = null })
       </div>
       <p
         {...textProps}
-        className={`mt-2 whitespace-pre-line text-stone-900 ${
+        className={`mt-2 whitespace-pre-line text-ink ${
           textProps.lang === 'ar' ? 'font-quran text-xl leading-loose' : 'text-base leading-relaxed'
         }`}
       >
         {evidence.text}
       </p>
-      {action && <div className="mt-3 border-t border-stone-100 pt-2">{action}</div>}
+      {action && <div className="mt-4 border-t border-black/10 pt-3">{action}</div>}
     </article>
   )
 }

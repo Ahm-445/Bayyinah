@@ -8,9 +8,9 @@ export default function RouteError() {
 
   return (
     <div className="mx-auto max-w-xl px-4 py-16 text-center">
-      <h1 className="text-xl font-semibold">{t('routeError.title')}</h1>
-      <p className="mt-2 text-stone-600">{message}</p>
-      <Link to="/" className="mt-6 inline-block text-emerald-700 underline">
+      <h1 className="text-3xl font-semibold text-brand">{t('routeError.title')}</h1>
+      <p className="mt-2 text-ink-soft">{message}</p>
+      <Link to="/" className="btn btn-primary mt-6">
         {t('routeError.back')}
       </Link>
     </div>

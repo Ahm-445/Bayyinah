@@ -12,13 +12,18 @@ export default function StatsBar({ stats }) {
           key={key}
           data-stat={key}
           title={key === 'score' ? t('queue.scoreRule') : undefined}
-          className="rounded-lg border border-stone-200 bg-white px-4 py-3"
+          // The score is the one "earned" figure, so it gets the deep band and gold.
+          className={`rounded-card px-4 py-4 ${key === 'score' ? 'col-span-2 bg-house text-white sm:col-span-1' : 'bg-white shadow-card'}`}
         >
-          <dt className="text-xs text-stone-500">{t(`queue.stats.${key}`)}</dt>
-          <dd className="mt-1 text-2xl font-semibold tabular-nums text-stone-900">{stats[key]}</dd>
+          <dt className={`text-xs font-semibold ${key === 'score' ? 'text-white/70' : 'text-ink-soft'}`}>
+            {t(`queue.stats.${key}`)}
+          </dt>
+          <dd className={`mt-1 text-3xl font-semibold tabular-nums ${key === 'score' ? 'text-gold' : 'text-ink'}`}>
+            {stats[key]}
+          </dd>
           {key === 'score' && breakdown && (
             // Computed by the server: +1 per published answer, +10 per selection.
-            <dd data-score-breakdown className="mt-1 text-xs text-stone-500">
+            <dd data-score-breakdown className="mt-1 text-xs text-white/70">
               {t('queue.scoreBreakdown', breakdown)}
             </dd>
           )}

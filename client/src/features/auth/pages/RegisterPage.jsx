@@ -5,6 +5,7 @@ import { useI18n } from '../../../i18n/core.js'
 import { register } from '../../../services/api/auth.js'
 import { isApiError, userMessage } from '../../../services/errors.js'
 import { homeFor } from '../../../shared/lib/roles.js'
+import AuthShell from '../components/AuthShell.jsx'
 import Field from '../components/Field.jsx'
 
 const USERNAME = /^[A-Za-z0-9_.-]{3,32}$/
@@ -48,9 +49,9 @@ export default function RegisterPage() {
   }
 
   return (
-    <section className="mx-auto max-w-sm rounded-lg border border-stone-200 bg-white p-6">
-      <h1 className="text-xl font-semibold">{t('register.title')}</h1>
-      <p className="mt-1 text-sm text-stone-600">{t('register.subtitle')}</p>
+    <AuthShell>
+      <h1 className="text-2xl font-semibold text-brand">{t('register.title')}</h1>
+      <p className="mt-1 text-sm text-ink-soft">{t('register.subtitle')}</p>
       <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-4">
         <Field
           id="username"
@@ -84,24 +85,24 @@ export default function RegisterPage() {
           error={errors.confirm}
         />
         {mutation.isError && !usernameTaken && (
-          <p role="alert" className="text-sm text-red-700">
+          <p role="alert" className="text-sm text-danger">
             {userMessage(mutation.error, i18n)}
           </p>
         )}
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="w-full rounded bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+          className="btn btn-primary btn-lg w-full"
         >
           {mutation.isPending ? t('register.creating') : t('register.create')}
         </button>
       </form>
-      <p className="mt-4 text-sm text-stone-600">
+      <p className="mt-4 text-sm text-ink-soft">
         {t('register.haveAccount')}{' '}
-        <Link to="/login" className="font-medium text-emerald-700 underline">
+        <Link to="/login" className="font-semibold text-accent underline underline-offset-2">
           {t('register.signIn')}
         </Link>
       </p>
-    </section>
+    </AuthShell>
   )
 }

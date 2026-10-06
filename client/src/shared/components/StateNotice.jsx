@@ -1,13 +1,13 @@
 const TONE = {
-  neutral: 'border-stone-200 bg-white text-stone-800',
-  warning: 'border-amber-200 bg-amber-50 text-amber-900',
-  danger: 'border-red-200 bg-red-50 text-red-900',
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+  neutral: 'bg-white text-ink shadow-card',
+  warning: 'bg-amber-50 text-amber-900 ring-1 ring-amber-200',
+  danger: 'bg-danger/5 text-danger ring-1 ring-danger/20',
+  success: 'bg-mint/60 text-house',
 }
 
 export default function StateNotice({ title, tone = 'neutral', children }) {
   return (
-    <section className={`rounded-lg border p-4 ${TONE[tone]}`}>
+    <section className={`rounded-card p-5 ${TONE[tone]}`}>
       <h2 className="font-semibold">{title}</h2>
       <div className="mt-1 text-sm">{children}</div>
     </section>

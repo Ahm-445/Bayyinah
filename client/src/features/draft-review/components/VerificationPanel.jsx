@@ -5,7 +5,7 @@ function Check({ ok, children }) {
   const { t } = useI18n()
   return (
     <li className="flex items-center gap-2">
-      <span aria-hidden className={ok ? 'text-emerald-600' : 'text-red-600'}>
+      <span aria-hidden className={ok ? 'text-accent' : 'text-danger'}>
         {ok ? '✓' : '✗'}
       </span>
       <span>{children}</span>
@@ -18,7 +18,7 @@ function Findings({ title, items, tone }) {
   if (!items.length) return null
   return (
     <div>
-      <h4 className="text-xs font-semibold tracking-wide text-stone-500 uppercase">{title}</h4>
+      <h4 className="eyebrow text-ink-soft">{title}</h4>
       <ul className={`mt-1 list-disc space-y-1 ps-5 text-sm ${tone}`}>
         {items.map((item) => (
           <li key={item} dir="auto">
@@ -34,14 +34,14 @@ function Findings({ title, items, tone }) {
 export default function VerificationPanel({ verification }) {
   const { t } = useI18n()
   return (
-    <section aria-labelledby="verification-heading" className="rounded-lg border border-stone-200 bg-white p-4">
+    <section aria-labelledby="verification-heading" className="card p-5">
       <div className="flex items-start justify-between gap-2">
-        <h2 id="verification-heading" className="font-semibold">
+        <h2 id="verification-heading" className="text-xl">
           {t('verification.title')}
         </h2>
         <div className="flex flex-col items-end gap-1">
           <VerificationBadge status={verification?.status} />
-          <span className="text-xs text-stone-500">{t('verification.appliesOriginal')}</span>
+          <span className="text-xs text-ink-soft">{t('verification.appliesOriginal')}</span>
         </div>
       </div>
 
@@ -52,12 +52,12 @@ export default function VerificationPanel({ verification }) {
             <Check ok={verification.evidenceSupported}>{t('verification.evidenceSupports')}</Check>
           </ul>
           <Findings title={t('verification.warnings')} items={verification.warnings} tone="text-amber-800" />
-          <Findings title={t('verification.unsupported')} items={verification.unsupportedClaims} tone="text-red-800" />
-          <Findings title={t('verification.missing')} items={verification.missingCitations} tone="text-red-800" />
-          <Findings title={t('verification.riskFlags')} items={verification.riskFlags} tone="text-red-800" />
+          <Findings title={t('verification.unsupported')} items={verification.unsupportedClaims} tone="text-danger" />
+          <Findings title={t('verification.missing')} items={verification.missingCitations} tone="text-danger" />
+          <Findings title={t('verification.riskFlags')} items={verification.riskFlags} tone="text-danger" />
         </div>
       ) : (
-        <p className="mt-2 text-sm text-stone-600">{t('verification.noDraft')}</p>
+        <p className="mt-2 text-sm text-ink-soft">{t('verification.noDraft')}</p>
       )}
     </section>
   )

@@ -6,17 +6,17 @@ import { fullDate, timeAgo } from '../../../shared/lib/format.js'
 import { useMyQuestions } from '../hooks/useMyQuestions.js'
 
 const TONE = {
-  neutral: 'bg-stone-100 text-stone-700',
+  neutral: 'bg-ceramic text-ink-soft',
   warning: 'bg-amber-100 text-amber-800',
-  success: 'bg-emerald-100 text-emerald-800',
-  danger: 'bg-red-100 text-red-800',
+  success: 'bg-mint text-brand',
+  danger: 'bg-danger/10 text-danger',
 }
 
 function StatusChip({ status }) {
   const { t } = useI18n()
   const tone = QUESTION_STATUS_TONE[status] ?? 'neutral'
   return (
-    <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${TONE[tone]}`}>
+    <span className={`chip ${TONE[tone]}`}>
       {t(`questionStatus.${status}`, { defaultValue: status })}
     </span>
   )
@@ -28,7 +28,7 @@ export default function QuestionHistory() {
   const query = useMyQuestions()
 
   return (
-    <nav aria-labelledby="question-history-heading" className="rounded-lg border border-stone-200 bg-white p-4">
+    <nav aria-labelledby="question-history-heading" className="card p-5">
       <h2 id="question-history-heading" className="font-semibold">
         {t('history.title')}
       </h2>
@@ -42,16 +42,16 @@ export default function QuestionHistory() {
                     <NavLink
                       to={`/questions/${q.id}`}
                       className={({ isActive }) =>
-                        `block rounded px-2 py-2 hover:bg-stone-50 ${isActive ? 'bg-emerald-50 ring-1 ring-emerald-600/20' : ''}`
+                        `block rounded-lg px-2 py-2.5 hover:bg-canvas ${isActive ? 'bg-mint/50' : ''}`
                       }
                     >
                       {/* Question text keeps its own language/direction. */}
-                      <span dir="auto" lang={q.language} className="line-clamp-2 text-sm text-stone-900">
+                      <span dir="auto" lang={q.language} className="line-clamp-2 text-sm text-ink">
                         {q.text}
                       </span>
-                      <span className="mt-1 flex items-center gap-2">
+                      <span className="mt-1.5 flex items-center gap-2">
                         <StatusChip status={q.status} />
-                        <span className="text-xs text-stone-500" title={fullDate(q.createdAt, locale)}>
+                        <span className="text-xs text-ink-soft" title={fullDate(q.createdAt, locale)}>
                           {timeAgo(q.createdAt, { locale })}
                         </span>
                       </span>
@@ -60,7 +60,7 @@ export default function QuestionHistory() {
                 ))}
               </ul>
             ) : (
-              <p className="text-sm text-stone-600">{t('history.empty')}</p>
+              <p className="text-sm text-ink-soft">{t('history.empty')}</p>
             )
           }
         </QueryState>

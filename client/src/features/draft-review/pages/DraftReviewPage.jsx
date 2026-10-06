@@ -21,7 +21,7 @@ export default function DraftReviewPage() {
 
   return (
     <div className="space-y-4">
-      <Link to="/daee" className="text-sm text-stone-600 hover:text-stone-950">
+      <Link to="/daee" className="text-sm font-semibold text-accent hover:underline">
         {t('common.backToQueue')}
       </Link>
       <QueryState
@@ -54,7 +54,7 @@ function DraftReview({ draft }) {
             <button
               type="button"
               onClick={() => setConfirming(true)}
-              className="mt-3 rounded border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-800 hover:bg-red-50"
+              className="btn btn-sm btn-danger-outline mt-3 bg-white"
             >
               {t('review.referral.writeAnyway')}
             </button>
@@ -76,7 +76,7 @@ function DraftReview({ draft }) {
         onCancel={() => setConfirming(false)}
       >
         <p>{t('review.referral.dialogBody')}</p>
-        <p className="mt-2 font-medium text-red-800">{t('review.referral.dialogStrong')}</p>
+        <p className="mt-2 font-medium text-danger">{t('review.referral.dialogStrong')}</p>
       </ConfirmDialog>
     </>
   )
@@ -155,14 +155,14 @@ function ReviewBody({ draft }) {
         <div
           role="alertdialog"
           aria-label={t('review.unsavedPrompt')}
-          className="fixed inset-x-0 bottom-0 z-10 border-t border-amber-300 bg-amber-50 px-4 py-3 shadow-lg"
+          className="fixed inset-x-0 bottom-0 z-30 bg-house px-4 py-3 text-white shadow-float"
         >
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 text-sm">
-            <span className="font-medium text-amber-900">{t('review.unsavedPrompt')}</span>
-            <button type="button" onClick={() => blocker.reset()} className="rounded bg-white px-3 py-1 ring-1 ring-stone-300">
+            <span className="font-semibold">{t('review.unsavedPrompt')}</span>
+            <button type="button" onClick={() => blocker.reset()} className="btn btn-sm bg-white text-accent">
               {t('review.stay')}
             </button>
-            <button type="button" onClick={() => blocker.proceed()} className="px-3 py-1 text-red-700">
+            <button type="button" onClick={() => blocker.proceed()} className="btn btn-sm border-white text-white">
               {t('review.discard')}
             </button>
           </div>

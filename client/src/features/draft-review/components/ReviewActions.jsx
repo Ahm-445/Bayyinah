@@ -26,7 +26,7 @@ export default function ReviewActions({ draft, unsavedText }) {
   const busy = approve.isPending || reject.isPending
 
   const backToQueue = (
-    <Link to="/daee" className="underline">
+    <Link to="/daee" className="font-semibold underline underline-offset-2">
       {t('common.backToQueueLink')}
     </Link>
   )
@@ -53,8 +53,8 @@ export default function ReviewActions({ draft, unsavedText }) {
   const error = approve.error ?? reject.error
 
   return (
-    <section className="space-y-3 rounded-lg border border-stone-200 bg-white p-4">
-      {isEmpty && <p className="text-sm text-stone-600">{t('review.actions.writeFirst')}</p>}
+    <section className="card space-y-4 p-5">
+      {isEmpty && <p className="text-sm text-ink-soft">{t('review.actions.writeFirst')}</p>}
 
       {needsCheckbox && (
         <label className="flex items-start gap-2 text-sm text-amber-900">
@@ -62,7 +62,7 @@ export default function ReviewActions({ draft, unsavedText }) {
             type="checkbox"
             checked={acknowledged}
             onChange={(e) => setAcknowledged(e.target.checked)}
-            className="mt-1"
+            className="mt-1 size-4 accent-accent"
           />
           <span>
             {draft.requiresResponsibility ? t('review.actions.responsibility') : t('review.actions.warningsAck')}
@@ -78,7 +78,7 @@ export default function ReviewActions({ draft, unsavedText }) {
           }}
           className="space-y-2"
         >
-          <label htmlFor="reject-reason" className="text-sm font-medium">
+          <label htmlFor="reject-reason" className="text-sm font-semibold">
             {t('review.actions.rejectReason')}
           </label>
           <textarea
@@ -88,17 +88,17 @@ export default function ReviewActions({ draft, unsavedText }) {
             onChange={(e) => setReason(e.target.value)}
             rows={3}
             required
-            className="w-full rounded border border-stone-300 p-2 text-sm"
+            className="input text-sm"
           />
           <div className="flex gap-2">
             <button
               type="submit"
               disabled={!reason.trim() || busy}
-              className="rounded bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-50"
+              className="btn btn-danger"
             >
               {reject.isPending ? t('review.actions.rejecting') : t('review.actions.confirmReject')}
             </button>
-            <button type="button" onClick={() => setRejecting(false)} className="px-3 py-1.5 text-sm text-stone-600">
+            <button type="button" onClick={() => setRejecting(false)} className="btn btn-ghost">
               {t('common.cancel')}
             </button>
           </div>
@@ -110,7 +110,7 @@ export default function ReviewActions({ draft, unsavedText }) {
             disabled={!canApprove}
             // Always send the editor text: it is plain text (Markdown stripped) even when unedited.
             onClick={() => approve.mutate({ text: currentText, acknowledgeWarnings: acknowledged })}
-            className="rounded bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-500"
+            className="btn btn-primary btn-lg"
           >
             {approve.isPending
               ? t('review.actions.publishing')
@@ -122,7 +122,7 @@ export default function ReviewActions({ draft, unsavedText }) {
             type="button"
             onClick={() => setRejecting(true)}
             disabled={busy}
-            className="rounded border border-stone-300 px-4 py-2 font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-50"
+            className="btn btn-dark-outline btn-lg"
           >
             {t('review.actions.reject')}
           </button>
@@ -130,7 +130,7 @@ export default function ReviewActions({ draft, unsavedText }) {
       )}
 
       {error && (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-danger">
           {userMessage(error, i18n)}
         </p>
       )}

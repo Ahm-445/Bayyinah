@@ -19,6 +19,7 @@ export default {
     cancel: 'Cancel',
     confirm: 'Confirm',
     loading: 'Loading…',
+    skipToContent: 'Skip to content',
     tryAgain: 'Try again',
     backToQueue: '← Back to queue',
     backToQueueLink: 'Back to queue',
@@ -52,6 +53,36 @@ export default {
     title: 'Something went wrong',
     unexpected: 'An unexpected error occurred.',
     back: 'Back to start',
+  },
+  home: {
+    eyebrow: 'Bayyinah',
+    title: 'Sourced answers about Islam, reviewed by qualified dāʿīs',
+    body: 'Ask in English or Arabic. Every answer is grounded in the Qur\'an and authentic hadith, and approved by a dāʿī first.',
+    start: 'Ask your first question',
+    sampleRef: 'Al-Ikhlas 112:1',
+    sampleLabel: 'Cited source',
+    sampleNote: '"Say, He is Allah, [who is] One." Every answer names its sources like this, so you can check them yourself.',
+    whyTitle: 'Why Bayyinah',
+    features: {
+      sources: {
+        title: 'Approved sources only',
+        body: 'Evidence comes from the Qur\'an, a tafsir, and Sahih al-Bukhari and Sahih Muslim, with the reference given in the answer.',
+      },
+      human: {
+        title: 'Always reviewed by a person',
+        body: 'The AI only prepares a draft and never publishes. Every answer you see was reviewed and published by a dāʿī.',
+      },
+      compare: {
+        title: 'More than one point of view',
+        body: 'More than one dāʿī answers your question, so you can compare and choose the answer that helps you most.',
+      },
+      honest: {
+        title: 'Honest about its limits',
+        body: 'Personal fatwa requests are referred to a scholar, and when the sources are not enough the assistant does not guess.',
+      },
+    },
+    closingTitle: 'Have a question about Islam?',
+    closingBody: 'Create an account and ask. You do not need to use your real name.',
   },
   auth: {
     signInTitle: 'Sign in',

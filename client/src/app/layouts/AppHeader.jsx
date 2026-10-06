@@ -21,21 +21,26 @@ function LanguageToggle() {
       lang={next}
       // The visible language name is the accessible name (WCAG label-in-name).
       title={t('lang.switchLabel')}
-      className="rounded border border-stone-300 px-2 py-0.5 text-xs font-medium text-stone-700 hover:bg-stone-50"
+      className="btn btn-sm btn-ghost border-line"
     >
       {t('lang.switchTo')}
     </button>
   )
 }
 
-export default function AppHeader({ homeTo, children }) {
-  const { lang } = useI18n()
+export default function AppHeader({ children }) {
+  const { t, lang } = useI18n()
   return (
-    <header className="border-b border-stone-200 bg-white">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
-        <Link to={homeTo} className="flex items-baseline gap-2 font-semibold text-emerald-800">
-          <span lang="en">Bayyinah</span>
-          <span lang="ar" dir="rtl" className="font-quran text-lg leading-none">
+    <header className="relative z-20 bg-white shadow-nav md:sticky md:top-0">
+      <a href="#main" className="skip-link">
+        {t('common.skipToContent')}
+      </a>
+      <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2 md:min-h-[72px]">
+        <Link to="/" className="flex items-baseline gap-2 font-semibold text-brand">
+          <span lang="en" className="text-lg">
+            Bayyinah
+          </span>
+          <span lang="ar" dir="rtl" className="font-quran text-xl leading-none">
             بيّنة
           </span>
         </Link>
@@ -45,12 +50,12 @@ export default function AppHeader({ homeTo, children }) {
             type="button"
             onClick={resetMocks}
             title={MOCK_STRINGS[lang].resetTitle}
-            className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-200"
+            className="chip bg-amber-100 text-amber-800 hover:bg-amber-200"
           >
             {MOCK_STRINGS[lang].reset}
           </button>
         )}
-        <div className="ms-auto flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        <div className="ms-auto flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
           {children}
           <LanguageToggle />
         </div>

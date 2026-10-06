@@ -23,7 +23,7 @@ export default function QuestionForm({ onSubmit, submitting, error }) {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-3">
-      <label htmlFor="question" className="block font-medium">
+      <label htmlFor="question" className="block font-semibold">
         {t('ask.label')}
       </label>
       <textarea
@@ -37,33 +37,29 @@ export default function QuestionForm({ onSubmit, submitting, error }) {
         aria-invalid={showError}
         aria-describedby="question-help"
         placeholder={t('ask.placeholder')}
-        className={`w-full rounded-lg border bg-white p-4 leading-relaxed focus:ring-2 focus:outline-none ${
-          showError
-            ? 'border-red-400 focus:ring-red-500/20'
-            : 'border-stone-300 focus:border-emerald-600 focus:ring-emerald-600/20'
-        }`}
+        className="input p-4 leading-relaxed"
       />
       <div id="question-help" className="flex justify-between gap-4 text-sm">
-        <span className={showError ? 'text-red-700' : 'text-stone-500'}>
+        <span className={showError ? 'text-danger' : 'text-ink-soft'}>
           {showError
             ? tooLong
               ? t('ask.tooLong', { max: MAX_LENGTH })
               : t('ask.empty')
             : t('ask.privacy')}
         </span>
-        <span dir="ltr" className={`tabular-nums ${tooLong ? 'text-red-700' : 'text-stone-500'}`}>
+        <span dir="ltr" className={`tabular-nums ${tooLong ? 'text-danger' : 'text-ink-soft'}`}>
           {trimmed.length}/{MAX_LENGTH}
         </span>
       </div>
       {error && (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-danger">
           {userMessage(error, i18n)}
         </p>
       )}
       <button
         type="submit"
         disabled={submitting}
-        className="rounded bg-emerald-700 px-5 py-2.5 font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+        className="btn btn-primary btn-lg"
       >
         {submitting ? t('ask.sending') : t('ask.send')}
       </button>

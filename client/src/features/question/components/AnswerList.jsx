@@ -32,11 +32,11 @@ export default function AnswerList({ questionId }) {
         return (
           <section className="space-y-4">
             <div>
-              <h2 className="text-xl font-semibold">
+              <h2 className="text-2xl">
                 {single ? t('answers.yourAnswer') : t('answers.compare', { count: answers.length })}
               </h2>
               {!chosen && (
-                <p className="mt-1 text-stone-600">{single ? t('answers.readOne') : t('answers.readMany')}</p>
+                <p className="mt-1 text-ink-soft">{single ? t('answers.readOne') : t('answers.readMany')}</p>
               )}
             </div>
 
@@ -46,7 +46,7 @@ export default function AnswerList({ questionId }) {
               </StateNotice>
             )}
             {select.isError && (
-              <p role="alert" className="text-sm text-red-700">
+              <p role="alert" className="text-sm text-danger">
                 {userMessage(select.error, i18n)}
               </p>
             )}

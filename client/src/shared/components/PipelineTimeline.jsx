@@ -1,10 +1,10 @@
 import { useI18n } from '../../i18n/core.js'
 
 const DOT = {
-  done: 'bg-emerald-500',
+  done: 'bg-accent',
   warning: 'bg-amber-500',
-  failed: 'bg-red-500',
-  skipped: 'bg-stone-300',
+  failed: 'bg-danger',
+  skipped: 'bg-black/10',
 }
 
 /**
@@ -17,15 +17,15 @@ export default function PipelineTimeline({ steps }) {
   if (!steps?.length) return null
   const text = (d) => (typeof d === 'string' ? d : t(d.key, d.params))
   return (
-    <ol className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-stone-600">
+    <ol className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-ink-soft">
       {steps.map((step) => (
         <li key={step.stage} className="flex items-center gap-1.5">
           <span className={`size-2 rounded-full ${DOT[step.status] ?? DOT.done}`} aria-hidden />
-          <span className="font-medium text-stone-800">
+          <span className="font-semibold text-ink">
             {t(`pipeline.stages.${step.stage}`, { defaultValue: step.stage })}
           </span>
           {step.details?.length > 0 && <span>{step.details.map(text).join(' · ')}</span>}
-          {step.ms != null && <span className="text-stone-400">{step.ms} ms</span>}
+          {step.ms != null && <span className="text-black/40">{step.ms} ms</span>}
         </li>
       ))}
     </ol>

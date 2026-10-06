@@ -30,19 +30,19 @@ export default function ConfirmDialog({
         e.preventDefault()
         if (!busy) onCancel()
       }}
-      className="m-auto w-[min(28rem,calc(100%-2rem))] rounded-lg bg-white p-0 shadow-xl backdrop:bg-black/40"
+      className="m-auto w-[min(28rem,calc(100%-2rem))] rounded-card bg-white p-0 text-ink shadow-float backdrop:bg-black/40"
     >
-      <div className="p-5">
-        <h2 id="confirm-dialog-title" className="text-lg font-semibold">
+      <div className="p-6">
+        <h2 id="confirm-dialog-title" className="text-xl font-semibold text-brand">
           {title}
         </h2>
-        <div className="mt-2 text-sm text-stone-700">{children}</div>
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="mt-2 text-sm text-ink-soft">{children}</div>
+        <div className="mt-6 flex flex-wrap justify-end gap-2">
           <button
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="rounded px-3 py-2 text-sm text-stone-700 hover:bg-stone-100 disabled:opacity-50"
+            className="btn btn-ghost"
           >
             {cancelLabel ?? t('common.cancel')}
           </button>
@@ -51,9 +51,7 @@ export default function ConfirmDialog({
             onClick={onConfirm}
             disabled={busy}
             autoFocus
-            className={`rounded px-4 py-2 text-sm font-medium text-white disabled:opacity-60 ${
-              danger ? 'bg-red-700 hover:bg-red-800' : 'bg-emerald-700 hover:bg-emerald-800'
-            }`}
+            className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`}
           >
             {confirmLabel ?? t('common.confirm')}
           </button>

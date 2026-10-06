@@ -14,7 +14,7 @@ import { useQuestion } from '../hooks/useQuestion.js'
 function AskLink() {
   const { t } = useI18n()
   return (
-    <Link to="/ask" className="font-medium underline">
+    <Link to="/ask" className="font-semibold underline underline-offset-2">
       {t('question.askLink')}
     </Link>
   )
@@ -58,11 +58,11 @@ function QuestionView({ question, justSubmitted }) {
   return (
     <>
       <header>
-        <p className="text-sm text-stone-500" title={fullDate(question.createdAt, locale)}>
+        <p className="text-sm text-ink-soft" title={fullDate(question.createdAt, locale)}>
           {t('question.asked', { time: timeAgo(question.createdAt, { locale }) })}
         </p>
         {/* Content keeps its own language and direction, whatever the UI language. */}
-        <h1 dir="auto" lang={question.language} className="mt-1 text-2xl font-semibold text-stone-900">
+        <h1 dir="auto" lang={question.language} className="mt-1 text-2xl leading-snug font-semibold text-brand sm:text-3xl">
           {question.text}
         </h1>
       </header>
@@ -74,9 +74,9 @@ function QuestionView({ question, justSubmitted }) {
       )}
 
       {inProgress && (
-        <section className="rounded-lg border border-stone-200 bg-white p-5">
+        <section className="card p-5">
           <ProgressSteps status={status} />
-          <p className="mt-4 text-sm text-stone-600">
+          <p className="mt-4 text-sm text-ink-soft">
             {status === QUESTION_STATUS.AWAITING_REVIEW ? t('question.reviewingNote') : t('question.autoUpdate')}
           </p>
         </section>

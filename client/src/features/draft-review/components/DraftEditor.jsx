@@ -31,8 +31,8 @@ export default function DraftEditor({
     <section className="space-y-3">
       {hasAiDraft && <AiNotice />}
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="font-semibold">{heading}</h2>
-        <span className="text-xs text-stone-500">
+        <h2 className="text-xl">{heading}</h2>
+        <span className="text-xs text-ink-soft">
           {versionLabel}
           {dirty && t('review.unsaved')}
         </span>
@@ -55,14 +55,14 @@ export default function DraftEditor({
             onFocus={onFocus}
             rows={14}
             placeholder={hasAiDraft ? undefined : t('review.placeholder')}
-            className="w-full rounded-lg border border-stone-300 bg-white p-4 leading-relaxed focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 focus:outline-none"
+            className="input p-4 leading-relaxed"
           />
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={onSave}
               disabled={!dirty || !value.trim() || saving}
-              className="rounded border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-stone-50 disabled:opacity-50"
+              className="btn btn-sm btn-outline bg-white"
             >
               {saving ? t('review.saving') : t('review.save')}
             </button>
@@ -71,13 +71,13 @@ export default function DraftEditor({
                 type="button"
                 onClick={() => onChange(draft.generatedText)}
                 disabled={isOriginal}
-                className="text-sm text-stone-600 underline disabled:no-underline disabled:opacity-50"
+                className="text-sm text-ink-soft underline underline-offset-2 disabled:no-underline disabled:opacity-50"
               >
                 {t('review.restore')}
               </button>
             )}
             {saveError && (
-              <span role="alert" className="text-sm text-red-700">
+              <span role="alert" className="text-sm text-danger">
                 {userMessage(saveError, i18n)}
               </span>
             )}
@@ -88,9 +88,9 @@ export default function DraftEditor({
         <div
           dir="auto"
           lang={draft.question.language}
-          className="rounded-lg border border-stone-200 bg-stone-50 p-4 leading-relaxed whitespace-pre-wrap text-stone-800"
+          className="card p-5 leading-relaxed whitespace-pre-wrap text-ink"
         >
-          {draft.text || <span className="text-stone-500">{t('review.noText')}</span>}
+          {draft.text || <span className="text-ink-soft">{t('review.noText')}</span>}
         </div>
       )}
     </section>

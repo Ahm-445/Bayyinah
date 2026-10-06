@@ -7,6 +7,7 @@ import { login } from '../../../services/api/auth.js'
 import { isApiError, userMessage } from '../../../services/errors.js'
 import { getAuth } from '../../../services/session.js'
 import { homeFor } from '../../../shared/lib/roles.js'
+import AuthShell from '../components/AuthShell.jsx'
 import Field from '../components/Field.jsx'
 
 /** One sign-in page for questioners, dāʿīs and admins; redirects by role. */
@@ -35,8 +36,8 @@ export default function LoginPage() {
   }
 
   return (
-    <section className="mx-auto max-w-sm rounded-lg border border-stone-200 bg-white p-6">
-      <h1 className="text-xl font-semibold">{t('auth.signInTitle')}</h1>
+    <AuthShell>
+      <h1 className="text-2xl font-semibold text-brand">{t('auth.signInTitle')}</h1>
       <form onSubmit={handleSubmit} className="mt-4 space-y-4">
         <Field
           id="username"
@@ -58,29 +59,29 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
         {mutation.isError && (
-          <p role="alert" className="text-sm text-red-700">
+          <p role="alert" className="text-sm text-danger">
             {isApiError(mutation.error, 401) ? t('auth.invalidCredentials') : userMessage(mutation.error, i18n)}
           </p>
         )}
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="w-full rounded bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+          className="btn btn-primary btn-lg w-full"
         >
           {mutation.isPending ? t('auth.signingIn') : t('auth.signIn')}
         </button>
       </form>
-      <p className="mt-4 text-sm text-stone-600">
+      <p className="mt-4 text-sm text-ink-soft">
         {t('auth.newHere')}{' '}
-        <Link to="/register" className="font-medium text-emerald-700 underline">
+        <Link to="/register" className="font-semibold text-accent underline underline-offset-2">
           {t('auth.createAccount')}
         </Link>{' '}
         {t('auth.toAsk')}
       </p>
       {/* Inline env check (not config.useMocks) so the build drops it when mocks are off. */}
       {import.meta.env.VITE_USE_MOCKS === 'true' && (
-        <p className="mt-4 text-xs text-stone-500">{MOCK_STRINGS[i18n.lang].accounts}</p>
+        <p className="mt-4 text-xs text-ink-soft">{MOCK_STRINGS[i18n.lang].accounts}</p>
       )}
-    </section>
+    </AuthShell>
   )
 }
