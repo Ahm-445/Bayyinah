@@ -2,8 +2,11 @@
 // Mirrors the Frontend's rules (client/src/shared/lib/references.js):
 // a verse is cited by its "surah:ayah" number, anything else by its reference.
 
+const { evidenceVerseKeys } = require("../modules/ai/rag/citation/citationBuilder");
+
+// Older chunk ids that carry the verse at the end ("quran-hafs-51-56").
 const VERSE_CHUNK =
-  /(?:quran-hafs|quran-translation-1947|tafsir-book-1)-(\d+)-(\d+)$/;
+  /(?:quran-hafs|quran-translation-\d+|tafsir-book-1)-(\d+)-(\d+)$/;
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -31,37 +34,30 @@ function normalizeEvidence(item) {
   };
 }
 
-function verseOf(evidence) {
-  const citation = evidence.citation || {};
-  let surah = Number(citation.surahNumber ?? evidence.surahNumber);
-  let ayah = Number(citation.ayahNumber ?? evidence.ayahNumber);
-
-  if (!surah || !ayah) {
-    const match = String(evidence.chunkId || "").match(VERSE_CHUNK);
-    surah = Number(match?.[1]);
-    ayah = Number(match?.[2]);
-  }
-
-  return surah && ayah ? { surah, ayah } : null;
+/**
+ * Every verse ("51:56") an evidence item covers: surahNumber/ayahNumber, the
+ * verses in a tafsir chunk's reference/references ("Quran 3:130–3:133"), or
+ * the verse at the end of an older chunk id.
+ */
+function verseKeysOf(evidence) {
+  const keys = evidenceVerseKeys(normalizeEvidence(evidence));
+  if (keys.length) return keys;
+  const match = String(evidence.chunkId || "").match(VERSE_CHUNK);
+  return match ? [`${Number(match[1])}:${Number(match[2])}`] : [];
 }
 
 function isCitedIn(text, evidence) {
   if (!text) return false;
-
-  const verse = verseOf(evidence);
-
-  if (verse) {
+  const verseKeys = verseKeysOf(evidence);
+  if (verseKeys.length) {
     // "51:56" must not match "151:56" or "51:567".
-    return new RegExp(
-      `(^|[^\\d:])${verse.surah}:${verse.ayah}(?!\\d)`
-    ).test(text);
+    return verseKeys.some((key) =>
+      new RegExp(`(^|[^\\d:])${escapeRegExp(key)}(?!\\d)`).test(text)
+    );
   }
-
   const reference =
     evidence.citation?.reference || evidence.citation?.sourceTitle;
-
   if (!reference) return false;
-
   return new RegExp(`${escapeRegExp(reference)}(?!\\d)`).test(text);
 }
 
@@ -90,4 +86,4 @@ function citationsFromText(finalText, evidence) {
   return citations;
 }
 
-module.exports = { normalizeEvidence, isCitedIn, citationsFromText };
+module.exports = { normalizeEvidence, verseKeysOf, isCitedIn, citationsFromText };
