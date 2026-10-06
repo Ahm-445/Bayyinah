@@ -27,6 +27,8 @@ Accounts: register a new questioner on the site. Dāʿī accounts are created by
 | ما معنى التوحيد؟ | Answer with tafsir and Qur'an references in Arabic |
 | ماذا قال النبي عن الإحسان إلى الجار؟ | Hadith category, hadith evidence graded صحيح |
 | Why do Muslims pray five times a day? | Plain-text English draft with references |
+| ما فضل الصدق في الإسلام؟ | Arabic draft from all sources (Qur'an, tafsir, hadith), references such as (التوبة 9:119) |
+| How should Muslims treat their parents? | English draft from all sources, e.g. (Al-Isra 17:23) and a hadith graded صحيح |
 | Which phone should I buy? | ABSTAIN, no draft |
 | My father is not Muslim, can I attend his Christmas dinner? | REFER, Level D, no draft |
 | ما حكم هذه المسألة؟ اختلف العلماء فيها | Level C, draft flagged for review |
