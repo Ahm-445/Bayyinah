@@ -53,3 +53,20 @@ assert.deepStrictEqual(buildInlineReferences([{
 assert.deepStrictEqual(buildInlineReferences([evidence], "en"), ["(Verified Collection, Book 1, hadith 123)"]);
 
 console.log("Citation provenance tests: PASSED");
+
+// Hadith grade: every hadith comes from Sahih al-Bukhari / Sahih Muslim.
+{
+  const { hadithGradeOf } = require("./citationBuilder");
+  const hadith = (extra) => ({ sourceType: "hadith", hadithCollection: "Sahih al-Bukhari", ...extra });
+  assert.strictEqual(hadithGradeOf(hadith()), "صحيح");
+  assert.strictEqual(hadithGradeOf({ category: "hadith", sourceTitle: "Sahih Muslim" }), "صحيح");
+  assert.strictEqual(hadithGradeOf(hadith({ hadithGrade: "حسن" })), "حسن", "a stored grade wins");
+  assert.strictEqual(hadithGradeOf({ sourceType: "hadith", hadithCollection: "Sunan Abi Dawud" }), null);
+  assert.strictEqual(hadithGradeOf({ sourceType: "quran", sourceTitle: "Sahih Muslim" }), null);
+  assert.strictEqual(buildCitation({
+    sourceId: "ahmedbaset-hadith-muslim", chunkId: "ahmedbaset-hadith-muslim-38", text: "...",
+    citation: { sourceType: "hadith", sourceTitle: "Sahih Muslim", reference: "Sahih Muslim 38" },
+  }).hadithGrade, "صحيح");
+  assert.ok(formatEvidence([{ sourceId: "s", chunkId: "c", text: "t", citation: { sourceType: "hadith", hadithGrade: "صحيح" } }])
+    .includes("Hadith grade: صحيح"));
+}

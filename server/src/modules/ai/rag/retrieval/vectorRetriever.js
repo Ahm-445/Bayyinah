@@ -1,4 +1,5 @@
 const { createEvidence } = require("../../contracts/evidenceContract");
+const { hadithGradeOf } = require("../citation/citationBuilder");
 
 const INDEX_NAME = "knowledge_chunks_vector_index";
 const COLLECTION_NAME = "knowledge_chunks";
@@ -151,6 +152,7 @@ function createVectorRetriever({
           chunkId: item.chunkId,
           // Qur'an chunks name their source `title`; hadith/translation use `sourceTitle`.
           sourceTitle: item.metadata?.sourceTitle || item.metadata?.title || null,
+          ...(hadithGradeOf(item.metadata) ? { hadithGrade: hadithGradeOf(item.metadata) } : {}),
         },
       })
     );

@@ -16,6 +16,17 @@ export function mapCitation(raw) {
   }
 }
 
+// Every hadith in the knowledge base is from Sahih al-Bukhari or Sahih Muslim
+// (graded صحيح); drafts stored before the backend sent hadithGrade fall back to it.
+const SAHIH_COLLECTIONS = ['sahih al-bukhari', 'sahih muslim']
+
+function hadithGradeOf(citation) {
+  if (citation.hadithGrade) return citation.hadithGrade
+  if ((citation.sourceType ?? citation.category) !== 'hadith') return null
+  const collection = String(citation.hadithCollection ?? citation.sourceTitle ?? '').trim().toLowerCase()
+  return SAHIH_COLLECTIONS.includes(collection) ? 'صحيح' : null
+}
+
 export function mapEvidence(raw) {
   const citation = raw.citation ?? {}
   return {
@@ -30,6 +41,7 @@ export function mapEvidence(raw) {
     sourceType: citation.sourceType ?? null,
     surahNumber: citation.surahNumber ?? null,
     ayahNumber: citation.ayahNumber ?? null,
+    hadithGrade: hadithGradeOf(citation),
   }
 }
 

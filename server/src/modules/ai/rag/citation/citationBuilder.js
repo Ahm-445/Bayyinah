@@ -1,3 +1,19 @@
+// Every hadith in the knowledge base comes from Sahih al-Bukhari or Sahih
+// Muslim, whose hadiths are graded "صحيح". A grade stored on the chunk wins.
+const SAHIH_COLLECTIONS = new Set(["sahih al-bukhari", "sahih muslim"]);
+const SAHIH_GRADE = "صحيح";
+
+/** The grade to show for a hadith citation, or null when unknown / not a hadith. */
+function hadithGradeOf(metadata = {}) {
+  const stored = metadata.hadithGrade || metadata.grade;
+  if (stored) return stored;
+  if ((metadata.sourceType || metadata.category) !== "hadith") return null;
+  const collection = String(metadata.hadithCollection || metadata.collection || metadata.sourceTitle || "")
+    .trim()
+    .toLowerCase();
+  return SAHIH_COLLECTIONS.has(collection) ? SAHIH_GRADE : null;
+}
+
 /**
  * Builds a citation object from retrieved evidence.
  *
@@ -53,7 +69,7 @@ function buildCitation(evidence) {
     pageNumber: metadata.pageNumber ?? metadata.page ?? null,
     hadithCollection: metadata.hadithCollection || metadata.collection || null,
     hadithNumber: metadata.hadithNumber || null,
-    hadithGrade: metadata.hadithGrade || metadata.grade || null,
+    hadithGrade: hadithGradeOf(metadata),
     gradingSource: metadata.gradingSource || null,
     surahNumber: metadata.surahNumber ?? null,
     surahName: metadata.surahName || null,
@@ -237,6 +253,8 @@ function buildInlineReferences(evidence, language = "en") {
 }
 
 module.exports = {
+  hadithGradeOf,
+  SAHIH_GRADE,
   buildCitation,
   buildCitations,
   buildInlineReference,

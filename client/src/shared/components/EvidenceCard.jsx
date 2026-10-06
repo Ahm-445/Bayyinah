@@ -2,7 +2,7 @@ import { useI18n } from '../../i18n/core.js'
 import { textDirProps } from '../lib/text.js'
 
 /**
- * MVP evidence card: source text and the reference string only.
+ * Evidence card: the reference, the hadith grade for hadith evidence, and the source text.
  * Arabic source text renders RTL in the Qur'an font (Amiri); anything else
  * uses dir="auto". Independent of the UI language.
  * `evidence` is a mapped evidence item (services/mappers/common.js).
@@ -20,11 +20,18 @@ export default function EvidenceCard({ evidence, cited = false, action = null })
         ) : (
           <span dir="ltr">{evidence.chunkId}</span>
         )}
-        {cited && (
-          <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-medium text-emerald-700">
-            {t('review.cited')}
-          </span>
-        )}
+        <span className="flex items-center gap-1.5">
+          {evidence.hadithGrade && (
+            <span className="rounded bg-sky-50 px-1.5 py-0.5 font-medium text-sky-800">
+              {t('review.hadithGrade', { grade: evidence.hadithGrade })}
+            </span>
+          )}
+          {cited && (
+            <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-medium text-emerald-700">
+              {t('review.cited')}
+            </span>
+          )}
+        </span>
       </div>
       <p
         {...textProps}

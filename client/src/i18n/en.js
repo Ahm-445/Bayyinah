@@ -247,6 +247,7 @@ export default {
     noEvidence: 'No evidence was retrieved.',
     insert: '+ Insert citation',
     cited: 'Cited',
+    hadithGrade: 'Hadith grade: {grade}',
     issue: {
       failedTitle: 'Verification failed: check the draft before publishing',
       failedBody: 'The AI draft below did not pass verification. You can edit and publish it, but fix or remove these problems first.',
