@@ -40,12 +40,9 @@ out-of-scope question → `REVIEW`, otherwise `ALLOW`.
 - Approved sources are chunked and embedded at ingestion time into `knowledge_chunks`
   (Voyage `voyage-4-large`, 1024 dimensions, cosine) with an Atlas Vector Search index.
 - The question is embedded the same way; the retriever returns the top 3 chunks (50 candidates), filtered to
-  approved sources, to the source types the category allows, and to Arabic/English chunks. Sources an admin has
-  switched off in the registry (`active: false`) are left out.
+  approved sources, to the source types the category allows, and to Arabic/English chunks.
 - When the question names a source type ("from the Quran", "a hadith", "tafsir", "translation"), that type is
   **required**: if it is missing or too weak, the result is ABSTAIN instead of an answer from other sources.
-- Tafsir comes from al-Ṭabarī's جامع البيان (d. 310 AH). Long passages are split into chunks that keep the verses
-  they explain.
 - Hadith evidence carries its grade. All hadith come from Sahih al-Bukhari and Sahih Muslim, so the grade is "صحيح".
 
 ## 4. Evidence sufficiency

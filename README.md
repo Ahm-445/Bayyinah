@@ -24,7 +24,7 @@ Islamic AI Challenge 2026, track 04: knowledge and verification tools for people
 
 1. The asker writes a question in Arabic or English.
 2. The AI classifies it (topic, language, level A–D) and retrieves evidence **only** from approved sources:
-   the Qur'an, al-Ṭabarī's tafsir, and Sahih al-Bukhari and Sahih Muslim.
+   the Qur'an, a tafsir, and Sahih al-Bukhari and Sahih Muslim.
 3. It drafts an answer with inline references such as `(الإخلاص 112:1)`, then verifies every reference and every
    factual sentence against the evidence.
 4. Each dāʿī receives the question with the draft, the evidence (hadith grades included) and the verification
@@ -50,7 +50,7 @@ sees has been reviewed and published by a person.
 |---|---|---|
 | القرآن الكريم – حفص عن عاصم | 2026-09-30 | Quranpedia.net |
 | Saheeh International (English) | 2026-10-02 | Quranpedia.net |
-| جامع البيان في تأويل آي القرآن – الطبري (ت 310هـ) | 2026-10-02 | Quranpedia.net |
+| تيسير التفسير – إبراهيم القطان | 2026-08-10 | Quranpedia.net |
 | Sahih al-Bukhari, Sahih Muslim | v1.2.0 | AhmedBaset/hadith-json (from Sunnah.com) |
 
 How each source is used and verified, with its usage terms: [docs/source-registry.md](docs/source-registry.md).
@@ -122,9 +122,11 @@ Live end-to-end checks are listed in [docs/testing.md](docs/testing.md).
 
 ## Known limitations
 
-- The knowledge base holds the Qur'an, one English translation, al-Ṭabarī's tafsir and the two Sahihs. Other references
+- The knowledge base holds the Qur'an, one English translation, one tafsir and the two Sahihs. Other references
   recommended by the challenge's scientific package (Bayyinat Q&A for objections, the islamic-content.com glossary,
   dorar.net) are not ingested yet; such questions get an abstention and the dāʿī answers.
+- The tafsir (تيسير التفسير) is a contemporary work from Quranpedia; the package's tafsir references are works of
+  the first three centuries or dorar.net/tafseer.
 - Classification is rule-based and can miss unusual wording; verification is done by a model and can be wrong,
   so the dāʿī's review remains the final check.
 - Every dāʿī receives every question; routing by specialty is not built yet.

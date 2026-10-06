@@ -22,19 +22,6 @@
     "active": true
   },
   {
-    "sourceId": "quranpedia-tafsir-book-4",
-    "title": "جامع البيان في تأويل آي القرآن",
-    "domain": "tafsir",
-    "url": "https://quranpedia.net/book/4",
-    "author": "محمد بن جرير الطبري (ت 310هـ)",
-    "authorityLevel": "secondary",
-    "language": "ar",
-    "version": "2026-10-02",
-    "license": "Quranpedia dataset usage terms",
-    "usageBasis": "Tafsir of the first three centuries, as required for tafsir by the challenge scientific package. Ownership: the classical works in this data (Quran text, canonical qira'at, classical tafsirs) are the shared heritage of the Muslim ummah. The digitization, structuring, verification, diacritical correction (dabt), linking, and metadata are the work of the Quranpedia.net team, compiled and continuously corrected over years; translations and contemporary works remain the property of their authors and publishers. License: free to use inside apps, websites, and research tools with no attribution required (a link is appreciated). Republishing this data — in full or in part — as a downloadable database/dataset requires crediting Quranpedia.net with a link and stating this dump's version. Content is continuously corrected: keep copies current via /api/v1/changes?since=<version>. Provided as-is, without warranty.",
-    "active": true
-  },
-  {
     "sourceId": "quranpedia-tafsir-book-1",
     "title": "تيسير التفسير",
     "domain": "tafsir",
@@ -45,7 +32,7 @@
     "version": "2026-08-10",
     "license": "Quranpedia dataset usage terms",
     "usageBasis": "Ownership: the classical works in this data (Quran text, canonical qira'at, classical tafsirs) are the shared heritage of the Muslim ummah. The digitization, structuring, verification, diacritical correction (dabt), linking, and metadata are the work of the Quranpedia.net team, compiled and continuously corrected over years; translations and contemporary works remain the property of their authors and publishers. License: free to use inside apps, websites, and research tools with no attribution required (a link is appreciated). Republishing this data — in full or in part — as a downloadable database/dataset requires crediting Quranpedia.net with a link and stating this dump's version. Content is continuously corrected: keep copies current via /api/v1/changes?since=<version>. Provided as-is, without warranty.",
-    "active": false
+    "active": true
   },
   {
     "sourceId": "ahmedbaset-hadith-bukhari",

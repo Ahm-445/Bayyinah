@@ -6,7 +6,6 @@ function createRetriever({
   db,
   embeddingProvider,
   topK = 5,
-  sourceRegistry,
 }) {
   if (!db || typeof db.collection !== "function") {
     throw new Error("MongoDB database instance is required");
@@ -27,7 +26,6 @@ function createRetriever({
     db,
     embeddingProvider,
     topK,
-    sourceRegistry,
   });
 
   return {

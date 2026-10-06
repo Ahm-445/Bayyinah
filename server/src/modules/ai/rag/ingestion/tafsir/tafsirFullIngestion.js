@@ -4,10 +4,9 @@ const path = require("path");
 const { connectMongo, closeMongo } = require("../../storage/mongoClient");
 const { createVoyageEmbeddingProvider } = require("../../../providers/voyageEmbeddingProvider");
 const { ingestTafsir } = require("./tafsirIngestion");
-const { getTafsirBook } = require("./tafsirChunkBuilder");
 
 function readOptions(argv) {
-  const options = { dryRun: false, book: "1" };
+  const options = { dryRun: false, file: path.resolve(__dirname, "../../../../../../data/tafsir/tafsir-book-1.json.gz") };
   for (let index = 0; index < argv.length; index++) {
     const token = argv[index];
     if (token === "--dry-run") { options.dryRun = true; continue; }
@@ -16,13 +15,9 @@ function readOptions(argv) {
     const key = token.slice(2, separator === -1 ? undefined : separator);
     const value = separator === -1 ? argv[++index] : token.slice(separator + 1);
     if (!value) throw new Error(`Missing value for --${key}`);
-    if (key !== "file" && key !== "batch-size" && key !== "book") throw new Error(`Unknown option --${key}`);
+    if (key !== "file" && key !== "batch-size") throw new Error(`Unknown option --${key}`);
     options[key] = value;
   }
-  options.book = Number(options.book);
-  getTafsirBook(options.book); // fails early for an unsupported book id
-  // Default dump path: server/data/tafsir/tafsir-book-<id>.json.gz
-  options.file ||= path.resolve(__dirname, `../../../../../../data/tafsir/tafsir-book-${options.book}.json.gz`);
   return options;
 }
 
@@ -33,7 +28,6 @@ async function main() {
   try {
     const result = await ingestTafsir({
       filePath,
-      bookId: options.book,
       db,
       embeddingProvider: options.dryRun ? undefined : createVoyageEmbeddingProvider(),
       batchSize: Number(options["batch-size"] || 8),
