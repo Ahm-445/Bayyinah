@@ -125,10 +125,6 @@ Live end-to-end checks are listed in [docs/testing.md](docs/testing.md).
 - The knowledge base holds the Qur'an, one English translation, one tafsir and the two Sahihs. Other references
   recommended by the challenge's scientific package (Bayyinat Q&A for objections, the islamic-content.com glossary,
   dorar.net) are not ingested yet; such questions get an abstention and the dāʿī answers.
-- The tafsir (تيسير التفسير) is a contemporary work from Quranpedia; the package's tafsir references are works of
-  the first three centuries or dorar.net/tafseer.
 - Classification is rule-based and can miss unusual wording; verification is done by a model and can be wrong,
   so the dāʿī's review remains the final check.
-- Every dāʿī receives every question; routing by specialty is not built yet.
-- Askers see the dāʿī's text and choice of answer, but not yet a documentation badge per answer.
 - Arabic and English only.
