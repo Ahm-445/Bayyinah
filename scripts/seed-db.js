@@ -1,10 +1,12 @@
 /**
  * Seeds the dāʿī/admin accounts and the source registry. Safe to run again:
  * existing accounts keep their password (unless --reset-passwords) and the
- * `active` flag of a source is never overwritten.
+ * `active` flag of a source is not overwritten (unless --sync-active, which
+ * applies the registry file's `active` values, e.g. to retire a source).
  *
  *   npm run seed --prefix server
  *   npm run seed --prefix server -- --reset-passwords
+ *   npm run seed --prefix server -- --sync-active
  *
  * Password: SEED_PASSWORD from server/.env (required in production,
  * "demo1234" otherwise). Demo data only: never use real people's accounts.
@@ -48,21 +50,25 @@ async function seedUsers(password, resetPasswords) {
   }
 }
 
-async function seedSources() {
+async function seedSources(syncActive) {
   const registry = JSON.parse(fs.readFileSync(REGISTRY_PATH, "utf8"));
 
   for (const { active, ...source } of registry) {
+    const isActive = active !== false;
     await Source.updateOne(
       { sourceId: source.sourceId },
-      { $set: source, $setOnInsert: { active: active !== false } },
+      syncActive
+        ? { $set: { ...source, active: isActive } }
+        : { $set: source, $setOnInsert: { active: isActive } },
       { upsert: true }
     );
-    console.log(`source   ${source.sourceId}`);
+    console.log(`source   ${source.sourceId}${syncActive ? ` (active: ${isActive})` : ""}`);
   }
 }
 
 async function main() {
   const resetPasswords = process.argv.includes("--reset-passwords");
+  const syncActive = process.argv.includes("--sync-active");
   const password = env.seedPassword || (env.isProduction ? null : "demo1234");
 
   if (!password) {
@@ -77,7 +83,7 @@ async function main() {
   console.log(`Seeding database "${env.mongodbDbName}"`);
 
   await seedUsers(password, resetPasswords);
-  await seedSources();
+  await seedSources(syncActive);
 }
 
 main()

@@ -164,7 +164,7 @@ The Backend relies on exactly these fields and passes them through unchanged (se
 Mock behaviour: a personal question (`my`, `should I`, `fatwa`, …) → `REFER`; an unrelated topic (`python`, `bitcoin`, …) → `ABSTAIN`; anything else → `ANSWER` with a Qur'an verse in the question's language, e.g. `(Al-Ikhlas 112:1)` / `(الإخلاص 112:1)`.
 
 **For the AI owner**, nothing else is needed from you as long as `processQuestion` keeps this shape. Open items, not blocking:
-- The retriever should skip chunks of sources that are `active: false` in the registry (admin toggle). Today the toggle only changes the registry.
+- Done: the retriever skips chunks of sources that are `active: false` in the registry (admin toggle, cached for a minute).
 - Optional: per-stage timings in the result (`pipeline[].ms`) would let the Frontend show them in the demo.
 
 ## 6. Data ownership (same database, `MONGODB_DB_NAME`)
@@ -192,7 +192,7 @@ Decided in the Backend (change by PR on this file):
 | Dāʿī accounts | Fixed, created by the seed script. No public sign-up for dāʿīs or admins. |
 | Verification of final text | The AI verifies its own draft only. The dāʿī's edited text is not re-verified; the dāʿī takes responsibility. |
 
-Not implemented: password reset, `POST /evaluation/run`, enforcing `active: false` inside retrieval. Ahmed's temporary endpoints (`/questions/:id/ai-answer`, `/review/drafts`, `/review/drafts/:id/decision`, `/questions/:id/published-answer`) are **not** part of this API.
+Not implemented: password reset, `POST /evaluation/run`. Ahmed's temporary endpoints (`/questions/:id/ai-answer`, `/review/drafts`, `/review/drafts/:id/decision`, `/questions/:id/published-answer`) are **not** part of this API.
 
 ## 8. Running it
 
