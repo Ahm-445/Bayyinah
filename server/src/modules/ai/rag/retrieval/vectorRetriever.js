@@ -31,6 +31,8 @@ function createVectorRetriever({
   db,
   embeddingProvider,
   topK = 5,
+  // Optional { inactiveSourceIds(): Promise<string[]> } (see sourceRegistry.js).
+  sourceRegistry,
 }) {
   if (!db || typeof db.collection !== "function") {
     throw new Error("MongoDB database instance is required");
@@ -97,6 +99,12 @@ function createVectorRetriever({
       inputType: "query",
     });
 
+    // Sources switched off in the registry. sourceId is not a vector-index
+    // filter field, so they are removed after the search, which therefore asks
+    // for more candidates.
+    const inactiveSourceIds = sourceRegistry ? await sourceRegistry.inactiveSourceIds() : [];
+    const searchLimit = inactiveSourceIds.length ? topK * 4 : topK;
+
     function search(filter) {
       return collection.aggregate([
         {
@@ -105,10 +113,13 @@ function createVectorRetriever({
             path: "embedding",
             queryVector,
             filter,
-            numCandidates: Math.max(topK * 10, 50),
-            limit: topK,
+            numCandidates: Math.max(searchLimit * 10, 50),
+            limit: searchLimit,
           },
         },
+        ...(inactiveSourceIds.length
+          ? [{ $match: { sourceId: { $nin: inactiveSourceIds } } }, { $limit: topK }]
+          : []),
         {
           $project: {
             _id: 0,

@@ -2,6 +2,7 @@ const { connectMongo, closeMongo } = require("./rag/storage/mongoClient");
 const { createConfiguredLLMProvider } = require("./providers/llmProviderFactory");
 const { createVoyageEmbeddingProvider } = require("./providers/voyageEmbeddingProvider");
 const { createRetriever } = require("./rag/retrieval/retriever");
+const { createSourceRegistry } = require("./rag/retrieval/sourceRegistry");
 const { createDraftGenerator } = require("./generator/draftGenerator");
 const { verifyCitations } = require("./verifier/citationVerifier");
 const { createSemanticVerificationProvider } = require("./verifier/semanticVerificationProvider");
@@ -19,6 +20,7 @@ async function getOrchestrator() {
         db,
         embeddingProvider: createVoyageEmbeddingProvider(),
         topK: 3,
+        sourceRegistry: createSourceRegistry(db),
       });
       const evidenceVerifier = createEvidenceVerifierService(
         createSemanticVerificationProvider({ llmProvider })
